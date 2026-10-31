@@ -1,0 +1,122 @@
+[
+  {
+    "test": "asset blue.glb",
+    "status": "PASS",
+    "details": "16826652 bytes"
+  },
+  {
+    "test": "asset mantaray-XHD.glb",
+    "status": "PASS",
+    "details": "11881304 bytes"
+  },
+  {
+    "test": "asset blackoutprotocol.jpg",
+    "status": "PASS",
+    "details": "180661 bytes"
+  },
+  {
+    "test": "asset blackoutprotocol.mp3",
+    "status": "PASS",
+    "details": "5149733 bytes"
+  },
+  {
+    "test": "mission 1 definition",
+    "status": "PASS",
+    "details": "Static source search only"
+  },
+  {
+    "test": "mission 2 definition",
+    "status": "PASS",
+    "details": "Static source search only"
+  },
+  {
+    "test": "mission 3 definition",
+    "status": "PASS",
+    "details": "Static source search only"
+  },
+  {
+    "test": "mission 4 definition",
+    "status": "PASS",
+    "details": "Static source search only"
+  },
+  {
+    "test": "mission 5 definition",
+    "status": "PASS",
+    "details": "Static source search only"
+  },
+  {
+    "test": "desktop WebGL context",
+    "status": "BLOCKED",
+    "details": "{'available': False, 'version': None, 'renderer': None}"
+  },
+  {
+    "test": "desktop startup scene",
+    "status": "BLOCKED",
+    "details": "Failed to resolve module specifier \"three\". Import Map: \"three\" matches with \"three\" but is blocked by a null value"
+  },
+  {
+    "test": "desktop external request",
+    "status": "PASS",
+    "details": "[]"
+  },
+  {
+    "test": "desktop input elements",
+    "status": "PASS",
+    "details": "Buttons available in DOM, gameplay callback not exercised"
+  },
+  {
+    "test": "desktop viewport CSS",
+    "status": "PASS",
+    "details": "scrollWidth=1440"
+  },
+  {
+    "test": "mobile WebGL context",
+    "status": "BLOCKED",
+    "details": "{'available': False, 'version': None, 'renderer': None}"
+  },
+  {
+    "test": "mobile startup scene",
+    "status": "BLOCKED",
+    "details": "Failed to resolve module specifier \"three\". Import Map: \"three\" matches with \"three\" but is blocked by a null value"
+  },
+  {
+    "test": "mobile external request",
+    "status": "PASS",
+    "details": "[]"
+  },
+  {
+    "test": "mobile input elements",
+    "status": "PASS",
+    "details": "Buttons available in DOM, gameplay callback not exercised"
+  },
+  {
+    "test": "mobile viewport CSS",
+    "status": "PASS",
+    "details": "scrollWidth=390"
+  },
+  {
+    "test": "tablet WebGL context",
+    "status": "BLOCKED",
+    "details": "{'available': False, 'version': None, 'renderer': None}"
+  },
+  {
+    "test": "tablet startup scene",
+    "status": "BLOCKED",
+    "details": "Failed to resolve module specifier \"three\". Import Map: \"three\" matches with \"three\" but is blocked by a null value"
+  },
+  {
+    "test": "tablet external request",
+    "status": "PASS",
+    "details": "[]"
+  },
+  {
+    "test": "tablet input elements",
+    "status": "PASS",
+    "details": "Buttons available in DOM, gameplay callback not exercised"
+  },
+  {
+    "test": "tablet viewport CSS",
+    "status": "PASS",
+    "details": "scrollWidth=820"
+  }
+]

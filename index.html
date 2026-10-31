@@ -1,0 +1,2825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>OPERATION BLACKOUT PROTOCOL | VERTASCAN — Definitive Web Edition</title>
+<!-- System-font stack: no external font network requests. -->
+<style>
+:root{
+  --amber:#ff7a1a; --amber-dim:#8a4410; --cyan:#4fd1c5; --cyan-dim:#1e5751;
+  --void:#030405; --panel:rgba(6,9,11,.82); --red:#ff2d3a; --violet:#b26bff;
+  --line:rgba(79,209,197,.28); --text:#cfe8e4;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--void);touch-action:none;overscroll-behavior:none}
+body{font-family:'Arial Narrow','Liberation Sans Narrow',Arial,sans-serif;color:var(--text);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+canvas#gl{display:block;width:100%;height:100%;touch-action:none}
+.mono{font-family:Consolas,'Liberation Mono',monospace}
+
+/* v5.0 interface refinements */
+#title{background:linear-gradient(180deg,rgba(1,4,9,.22) 0%,rgba(2,5,10,.83) 62%,#030507 100%),url('blackoutprotocol.jpg') center/cover no-repeat;text-align:center;padding:24px}
+#title .btns{flex-wrap:wrap;justify-content:center;margin-top:28px}
+#title .brand,#titleName,#title .sub{text-shadow:0 4px 24px #000,0 2px 7px #000}
+#title .cls{background:rgba(0,0,0,.6)}
+#title .sub{max-width:90vw}
+#title #controls{background:rgba(2,7,12,.75);border:1px solid rgba(79,209,197,.2);padding:12px 18px;text-align:left}
+#title .btn{padding:11px 18px;font-size:14px;letter-spacing:.18em}
+#missionSelect{overflow-y:auto;padding:24px;background:linear-gradient(130deg,#030609,#091a25)}
+#missionSelect h2{font-size:clamp(26px,4vw,44px);letter-spacing:.25em;color:#e6f4f2}
+#missionSelect .subtitle{font-size:12px;letter-spacing:.25em;color:var(--cyan);margin:8px 0 25px}
+#missionGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;width:min(940px,94vw)}
+.missionCard{min-height:125px;text-align:left;border:1px solid var(--line);background:rgba(7,17,23,.9);color:var(--text);padding:16px;cursor:pointer;font-family:inherit}
+.missionCard:hover:not(:disabled),.missionCard:focus-visible{border-color:var(--amber);background:#16242b;outline:none}
+.missionCard:disabled{opacity:.42;cursor:not-allowed}
+.missionCard strong{display:block;font-size:18px;letter-spacing:.12em;color:#fff}
+.missionCard small{display:block;margin:7px 0;font-size:11px;letter-spacing:.16em;color:var(--cyan)}
+.missionCard .num{font:700 25px 'Space Mono',monospace;color:var(--amber)}
+#missionSelect .btn{margin-top:25px}
+#sessionNote{position:absolute;bottom:12px;font:10px 'Space Mono',monospace;color:#80adae;letter-spacing:.1em;text-align:center;padding:0 12px}
+@media(max-height:700px){#title .cls{margin-bottom:8px}#titleName{font-size:clamp(32px,6vw,64px)}#title .btns{margin-top:12px}#title #controls{margin-top:14px}#assetNote{margin-top:10px}}
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;background:var(--void)}
+.overlay.translucent{background:rgba(3,4,5,.86);backdrop-filter:blur(3px)}
+.hidden{display:none!important}
+
+/* scanlines + vignette film */
+/* scanline film retired — the NV grade in the shader owns the optic look now */
+#film{display:none}
+#staticVig{position:fixed;inset:0;pointer-events:none;z-index:39;
+  background:radial-gradient(ellipse at center,transparent 62%,rgba(0,10,14,.32) 100%)}
+
+/* ---------- boot ---------- */
+#boot>*{position:relative;z-index:1}
+#bootArt{position:absolute!important;inset:0;z-index:0!important;background:center/cover no-repeat;opacity:0;transition:opacity .9s ease}
+#bootArt:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(3,4,5,.12) 0%,rgba(3,4,5,.22) 55%,rgba(3,4,5,.92) 100%)}
+#boot.hasArt{justify-content:flex-end;padding-bottom:7vh}
+#boot.hasArt .logo,#boot.hasArt h1{display:none}
+#boot.hasArt #bootLog{height:112px;margin:0 0 14px}
+#boot .logo{font-size:13px;letter-spacing:.55em;color:var(--cyan);margin-bottom:6px}
+#boot h1{font-size:clamp(28px,5vw,56px);font-weight:700;letter-spacing:.18em;color:#fff}
+#boot h1 b{color:var(--amber);font-weight:700}
+#bootLog{width:min(560px,86vw);height:150px;overflow:hidden;margin:26px 0 14px;font-size:12px;line-height:1.7;color:var(--cyan);opacity:.85}
+#bootLog div b{color:var(--amber)}
+#barWrap{width:min(560px,86vw);height:4px;background:rgba(79,209,197,.15);position:relative}
+#bar{position:absolute;left:0;top:0;bottom:0;width:0%;background:linear-gradient(90deg,var(--cyan),var(--amber));box-shadow:0 0 12px var(--cyan)}
+#bootPct{margin-top:10px;font-size:12px;letter-spacing:.3em;color:var(--text)}
+
+/* ---------- title ---------- */
+#title{gap:0}
+#title .cls{font-size:11px;letter-spacing:.5em;color:var(--red);border:1px solid rgba(255,45,58,.4);padding:5px 16px;margin-bottom:26px}
+#title .brand{font-size:14px;letter-spacing:.6em;color:var(--cyan);margin-bottom:10px}
+#titleName{font-size:clamp(40px,8vw,96px);font-weight:700;letter-spacing:.14em;color:#fff;line-height:1;position:relative}
+#titleName b{color:var(--amber)}
+#title .sub{font-size:clamp(12px,1.6vw,17px);letter-spacing:.42em;color:var(--text);opacity:.7;margin-top:14px}
+.glitch{animation:glitch 4s infinite steps(1)}
+@keyframes glitch{0%,93%{text-shadow:none;transform:none}94%{text-shadow:-3px 0 var(--cyan),3px 0 var(--red);transform:translateX(2px)}96%{text-shadow:3px 0 var(--amber),-3px 0 var(--cyan);transform:translateX(-2px)}98%{text-shadow:none;transform:none}}
+.btn{margin-top:8px;background:transparent;border:1px solid var(--amber);color:var(--amber);
+  font-family:'Arial Narrow',Arial;font-weight:600;font-size:17px;letter-spacing:.35em;padding:13px 46px 13px 52px;cursor:pointer;
+  transition:all .15s;text-transform:uppercase}
+.btn:hover{background:var(--amber);color:#000;box-shadow:0 0 26px rgba(255,122,26,.5)}
+.btn.cy{border-color:var(--cyan);color:var(--cyan)}
+.btn.cy:hover{background:var(--cyan);color:#000;box-shadow:0 0 26px rgba(79,209,197,.45)}
+#title .btns{display:flex;gap:16px;margin-top:44px}
+#controls{margin-top:38px;display:grid;grid-template-columns:auto auto;gap:4px 26px;font-size:13px;letter-spacing:.12em;opacity:.75}
+#controls span{color:var(--cyan)}
+#assetNote{margin-top:22px;font-size:11px;letter-spacing:.2em;color:var(--amber-dim)}
+
+/* ---------- briefing ---------- */
+#brief .frame{width:min(720px,90vw);border:1px solid var(--line);background:var(--panel);padding:34px 40px;position:relative}
+#brief .frame:before{content:"";position:absolute;inset:6px;border:1px solid rgba(255,122,26,.18);pointer-events:none}
+#brief .tag{font-size:11px;letter-spacing:.45em;color:var(--red)}
+#brief h2{font-size:clamp(22px,3.4vw,34px);letter-spacing:.2em;color:#fff;margin:10px 0 4px}
+#brief h2 b{color:var(--amber)}
+#brief .lvl{font-size:12px;letter-spacing:.4em;color:var(--cyan);margin-bottom:18px}
+#briefBody{font-family:Consolas,monospace;font-size:13px;line-height:1.85;color:var(--text);min-height:150px;white-space:pre-wrap}
+#briefObj{margin-top:16px;font-size:13px;letter-spacing:.14em}
+#briefObj div{color:var(--cyan);padding:2px 0}
+#briefObj div:before{content:"▸ ";color:var(--amber)}
+#brief .btn{margin-top:28px}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:30;opacity:0;transition:opacity .4s}
+#hud.on{opacity:1}
+.corner{position:absolute;width:26px;height:26px;border:1px solid var(--line)}
+.corner.tl{top:14px;left:14px;border-right:0;border-bottom:0}
+.corner.tr{top:14px;right:14px;border-left:0;border-bottom:0}
+.corner.bl{bottom:14px;left:14px;border-right:0;border-top:0}
+.corner.br{bottom:14px;right:14px;border-left:0;border-top:0}
+
+#objPanel{position:absolute;top:26px;left:30px;min-width:230px}
+#objPanel .hd{font-size:11px;letter-spacing:.4em;color:var(--amber);border-bottom:1px solid rgba(255,122,26,.3);padding-bottom:5px;margin-bottom:7px}
+#objList div{font-size:13.5px;letter-spacing:.1em;color:var(--text);padding:1.5px 0}
+#objList div:before{content:"◇ ";color:var(--cyan)}
+#objList div.done{color:#5c7a76;text-decoration:line-through}
+#objList div.done:before{content:"◆ ";color:var(--amber)}
+#missionTimer{margin-top:10px;font-family:Consolas,monospace;font-size:20px;color:var(--red);letter-spacing:.2em;display:none}
+
+#alertWrap{position:absolute;top:26px;left:50%;transform:translateX(-50%);text-align:center}
+#alertState{font-size:15px;font-weight:600;letter-spacing:.5em;padding:4px 22px 4px 30px;border:1px solid var(--line);color:var(--cyan);transition:all .3s}
+#alertBarWrap{width:220px;height:3px;background:rgba(79,209,197,.14);margin:7px auto 0}
+#alertBar{height:100%;width:0%;background:var(--cyan);transition:background .3s;box-shadow:0 0 8px currentColor}
+#alertWrap.s2 #alertState{color:var(--amber);border-color:rgba(255,122,26,.45)}
+#alertWrap.s2 #alertBar{background:var(--amber)}
+#alertWrap.s3 #alertState{color:var(--red);border-color:rgba(255,45,58,.55);animation:blink 1s infinite}
+#alertWrap.s3 #alertBar{background:var(--red)}
+@keyframes blink{50%{opacity:.35}}
+
+#vitals{position:absolute;left:30px;bottom:96px;width:210px;font-size:11px;letter-spacing:.3em}
+.vrow{margin-bottom:9px}
+.vrow .lab{display:flex;justify-content:space-between;color:var(--text);opacity:.8;margin-bottom:3px}
+.vbar{height:5px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
+.vbar i{position:absolute;left:0;top:0;bottom:0;display:block;transition:width .12s linear}
+#bShield i{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+#bHull i{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+#bEnergy i{background:var(--violet);box-shadow:0 0 8px var(--violet)}
+#bHeat i{background:var(--red);box-shadow:0 0 8px var(--red)}
+
+#flight{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);text-align:center}
+#modeTag{font-size:14px;font-weight:600;letter-spacing:.5em;color:var(--cyan);padding:3px 18px 3px 26px;border:1px solid var(--line)}
+#modeTag.cloak{color:var(--violet);border-color:rgba(178,107,255,.5)}
+#modeTag.surge{color:var(--amber);border-color:rgba(255,122,26,.5)}
+#modeTag.drop{color:var(--red);border-color:rgba(255,45,58,.5)}
+#telem{font-family:Consolas,monospace;font-size:11px;margin-top:6px;opacity:.7;letter-spacing:.12em}
+
+#radarWrap{position:absolute;right:30px;bottom:30px;width:170px;height:170px}
+#radar{width:170px;height:170px}
+#radarLab{position:absolute;top:-18px;left:0;font-size:10px;letter-spacing:.4em;color:var(--cyan);opacity:.7}
+#wep{position:absolute;right:30px;bottom:212px;text-align:right;font-size:12px;letter-spacing:.24em}
+#wep .w{padding:2px 0;opacity:.45;transition:.15s}
+#wep .w.sel{opacity:1;color:var(--amber)}
+#wep .w b{color:var(--cyan);font-weight:600}
+
+#cross{position:absolute;left:50%;top:50%;width:min(44vmin,400px);height:min(44vmin,400px);transform:translate(-50%,-50%)}
+#cross svg{width:100%;height:100%;overflow:visible}
+#cross .scopeSpin{transform-origin:150px 150px;animation:scopeSpin 14s linear infinite}
+@keyframes scopeSpin{to{transform:rotate(360deg)}}
+#scopeData{position:absolute;left:50%;top:50%;transform:translate(-50%,calc(min(22vmin,200px) + 8px));
+  font-size:12px;letter-spacing:.26em;color:var(--cyan);opacity:.9;text-align:center;white-space:nowrap}
+#nvTag{position:absolute;top:66px;right:30px;font-size:10px;letter-spacing:.35em;color:var(--cyan);opacity:.6}
+
+/* ---------- touch controls ----------
+   Three size tiers, viewport-scaled:
+     --tp primary   (FIRE / THRUST)   — corner anchors
+     --ts secondary (RAIL / EMP / rocker)
+     --tu utility   (top-strip chips)
+   Each scheme owns its zones: PADS keeps the whole left half clean
+   for the floating stick and packs combat into a right-corner arc;
+   TILT anchors THRUST bottom-left and has no fire buttons at all
+   (tap = fire, flick = rail). Low-frequency toggles live in a slim
+   chip strip on the top edge, out of the action zone. */
+#touchUI{position:fixed;inset:0;z-index:34;display:none;pointer-events:none;
+  --tp:clamp(64px,16vmin,96px);
+  --ts:clamp(46px,11.5vmin,64px);
+  --tu:clamp(32px,8.5vmin,44px);
+  --edgeR:max(14px,env(safe-area-inset-right));
+  --edgeL:max(14px,env(safe-area-inset-left));
+  --bot:max(16px,env(safe-area-inset-bottom))}
+#touchUI.on{display:block}
+.tbtn{position:absolute;pointer-events:auto;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);border-radius:50%;background:rgba(6,9,11,.5);color:var(--cyan);
+  font-family:'Arial Narrow','Liberation Sans Narrow',Arial,sans-serif;font-weight:600;letter-spacing:.12em;
+  font-size:clamp(9px,2.4vmin,12px);
+  touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none}
+.tbtn:active,.tbtn.held,.tbtn.lit{background:rgba(79,209,197,.24);box-shadow:0 0 14px rgba(79,209,197,.35)}
+.tbtn.amber{color:var(--amber);border-color:rgba(255,122,26,.45)}
+.tbtn.amber:active,.tbtn.amber.held,.tbtn.amber.lit{background:rgba(255,122,26,.22);box-shadow:0 0 14px rgba(255,122,26,.35)}
+/* right-thumb combat arc — FIRE anchors the corner, RAIL and EMP fan around it */
+#tFire{right:var(--edgeR);bottom:var(--bot);width:var(--tp);height:var(--tp);
+  font-size:clamp(11px,3vmin,14px)}
+#tRail{right:calc(var(--edgeR) + var(--tp)*1.14);bottom:calc(var(--bot) + var(--tp)*.06);
+  width:var(--ts);height:var(--ts)}
+#tEmp{right:calc(var(--edgeR) + var(--tp)*.82);bottom:calc(var(--bot) + var(--tp)*.92);
+  width:var(--ts);height:var(--ts)}
+/* ASC/DSC — one vertical rocker pill on the right edge, not two floating circles */
+#tRock{position:absolute;pointer-events:none;right:var(--edgeR);
+  bottom:calc(var(--bot) + var(--tp)*1.55);width:var(--ts);height:calc(var(--ts)*2.2)}
+#tRock .tbtn{left:0;width:100%;height:50%}
+#tAsc{top:0;border-radius:calc(var(--ts)/2) calc(var(--ts)/2) 0 0;border-bottom-width:0}
+#tDsc{bottom:0;border-radius:0 0 calc(var(--ts)/2) calc(var(--ts)/2)}
+/* THRUST anchors the left corner in TILT (left half is stick-only in PADS) */
+#tThr{left:var(--edgeL);bottom:var(--bot);width:var(--tp);height:var(--tp);
+  font-size:clamp(11px,3vmin,14px);display:none}
+/* utility strip — WPN / CLK / SRG / CAL / pause chips on the top edge */
+#tStrip{position:absolute;pointer-events:none;top:max(8px,env(safe-area-inset-top));
+  left:50%;transform:translateX(-50%);display:flex;gap:clamp(6px,1.5vmin,10px)}
+#tStrip .tbtn{position:static;width:auto;min-width:var(--tu);height:var(--tu);
+  border-radius:9px;padding:0 clamp(8px,2vmin,12px)}
+#stickL{position:absolute;width:calc(var(--ts)*2.3);height:calc(var(--ts)*2.3);
+  border:1px solid var(--line);border-radius:50%;
+  background:rgba(6,9,11,.35);display:none;pointer-events:none}
+#stickNub{position:absolute;width:40%;height:40%;left:30%;top:30%;border-radius:50%;
+  background:rgba(79,209,197,.35);box-shadow:0 0 12px rgba(79,209,197,.4)}
+#tiltHint{position:absolute;left:50%;bottom:calc(var(--bot) + 6px);transform:translateX(-50%);display:none;
+  font-family:Consolas,'Liberation Mono',monospace;font-size:clamp(8px,2.2vmin,10px);
+  letter-spacing:.28em;color:var(--cyan);opacity:.55;text-align:center;white-space:nowrap}
+
+/* ---------- compact HUD on touch devices / small screens ---------- */
+@media (pointer:coarse),(max-width:900px){
+  #objPanel{top:10px;left:10px;min-width:160px;transform:scale(.8);transform-origin:top left}
+  #vitals{left:12px;bottom:auto;top:130px;width:150px;transform:scale(.82);transform-origin:top left}
+  #radarWrap{right:8px;bottom:auto;top:8px;transform:scale(.62);transform-origin:top right}
+  #alertWrap{top:52px}
+  #wep{display:none}
+  #nvTag{display:none}
+  #flight{bottom:8px}
+  #cross{width:min(58vmin,320px);height:min(58vmin,320px)}
+  #controls{display:none}
+}
+#nvTag b{animation:blink 1.6s infinite;font-weight:400}
+#hitmark{position:absolute;left:50%;top:50%;width:34px;height:34px;transform:translate(-50%,-50%) rotate(45deg);opacity:0}
+#hitmark:before,#hitmark:after{content:"";position:absolute;background:var(--amber)}
+#hitmark:before{left:50%;top:0;width:2px;height:100%;margin-left:-1px}
+#hitmark:after{top:50%;left:0;height:2px;width:100%;margin-top:-1px}
+#hitmark.pop{animation:hm .22s ease-out}
+@keyframes hm{0%{opacity:1;transform:translate(-50%,-50%) rotate(45deg) scale(.6)}100%{opacity:0;transform:translate(-50%,-50%) rotate(45deg) scale(1.25)}}
+
+#msg{position:absolute;left:50%;top:72%;transform:translateX(-50%);font-size:16px;font-weight:600;letter-spacing:.3em;color:var(--cyan);text-shadow:0 0 14px rgba(79,209,197,.6);opacity:0;transition:opacity .3s;text-align:center}
+#dmgVig{position:fixed;inset:0;pointer-events:none;z-index:31;opacity:0;background:radial-gradient(ellipse at center,transparent 46%,rgba(255,30,40,.5) 100%);transition:opacity .12s}
+#empFlash{position:fixed;inset:0;pointer-events:none;z-index:31;opacity:0;background:radial-gradient(ellipse at center,rgba(178,107,255,.28),transparent 70%)}
+
+/* ---------- pause / end ---------- */
+.panelCard{width:min(520px,88vw);border:1px solid var(--line);background:var(--panel);padding:34px 40px;text-align:center;position:relative}
+.panelCard h2{font-size:30px;letter-spacing:.3em;color:#fff;margin-bottom:6px}
+.panelCard h2 b{color:var(--amber)}
+.panelCard .sub2{font-size:12px;letter-spacing:.35em;color:var(--cyan);margin-bottom:24px}
+.qrow{display:flex;justify-content:center;gap:10px;margin:6px 0 22px}
+.qbtn{border:1px solid var(--line);background:transparent;color:var(--text);font-family:'Arial Narrow',Arial;font-weight:600;letter-spacing:.2em;font-size:13px;padding:8px 16px;cursor:pointer}
+.qbtn.sel{border-color:var(--amber);color:var(--amber);box-shadow:0 0 14px rgba(255,122,26,.25)}
+.stats{font-family:Consolas,monospace;font-size:13px;line-height:2;margin-bottom:20px;text-align:left;display:inline-block}
+.stats b{color:var(--amber)}
+#deathCard h2{color:var(--red)}
+.stack{display:flex;flex-direction:column;gap:12px;align-items:center}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="staticVig"></div>
+<div id="film"></div>
+<div id="dmgVig"></div>
+<div id="empFlash"></div>
+
+<!-- BOOT -->
+<div id="boot" class="overlay">
+  <div id="bootArt"></div>
+  <div class="logo mono">VERTASCAN AEROSPACE DIVISION</div>
+  <h1>BLACKOUT <b>PROTOCOL</b></h1>
+  <div id="bootLog" class="mono"></div>
+  <div id="barWrap"><div id="bar"></div></div>
+  <div id="bootPct" class="mono">0%</div>
+</div>
+
+<!-- TITLE -->
+<div id="title" class="overlay hidden">
+  <div class="cls mono">TOP SECRET // SCI // NOFORN</div>
+  <div class="brand">VERTASCAN //</div>
+  <div id="titleName" class="glitch">BLACKOUT <b>PROTOCOL</b></div>
+  <div class="sub">AGV-SENTINEL ALPHA · ANTI-GRAVITY COVERT STRIKE</div>
+  <div class="btns">
+    <button class="btn" id="btnStart">Initiate</button>
+    <button class="btn cy" id="btnQuality">Quality: High</button>
+    <button class="btn cy" id="btnCtl" style="display:none">Controls: Touch Pads</button>
+    <button class="btn cy" id="btnMissions">Mission Select</button>
+    <button class="btn cy" id="btnAudio">Audio: On</button>
+  </div>
+  <div id="controls">
+    <div><span>MOUSE</span> — aim / attitude</div><div><span>W A S D</span> — vector thrust</div>
+    <div><span>SPACE / X</span> — ascend / descend</div><div><span>SHIFT</span> — SURGE (loud)</div>
+    <div><span>C</span> — cloak field</div><div><span>F (hold)</span> — NULL-DROP freefall</div>
+    <div><span>LMB</span> — fire · <span>1 / 2</span> weapons</div><div><span>RMB (hold)</span> — rail lance charge</div>
+    <div><span>E</span> — EMP burst</div><div><span>P / ESC</span> — pause</div>
+  </div>
+  <div id="assetNote" class="mono"></div>
+</div>
+
+<!-- MISSION SELECT / PROGRESS -->
+<div id="missionSelect" class="overlay hidden">
+  <div class="brand mono" style="color:var(--amber);letter-spacing:.3em">VERTASCAN // CLASSIFIED OPERATIONS</div>
+  <h2>MISSION ARCHIVE</h2>
+  <div class="subtitle mono" id="progressLabel">CAMPAIGN STATUS</div>
+  <div id="missionGrid"></div>
+  <button class="btn cy" id="btnBackTitle">Return to Title</button>
+  <div id="sessionNote">PROGRESS SAVED IN THIS BROWSER · NO CLOUD ACCOUNT REQUIRED</div>
+</div>
+<!-- BRIEFING -->
+<div id="brief" class="overlay translucent hidden">
+  <div class="frame">
+    <div class="tag mono">EYES ONLY — OPERATION BLACKOUT PROTOCOL</div>
+    <h2 id="briefTitle">MISSION <b>01</b></h2>
+    <div class="lvl" id="briefLvl">PERIMETER BREACH</div>
+    <div id="briefBody" class="mono"></div>
+    <div id="briefObj"></div>
+    <button class="btn" id="btnDeploy">Deploy</button>
+  </div>
+</div>
+
+<!-- PAUSE -->
+<div id="pause" class="overlay translucent hidden">
+  <div class="panelCard">
+    <h2>STAND<b>BY</b></h2>
+    <div class="sub2 mono">UPLINK SUSPENDED</div>
+    <div style="font-size:12px;letter-spacing:.3em;color:var(--cyan);margin-bottom:8px">RENDER PROFILE</div>
+    <div class="qrow">
+      <button class="qbtn" data-q="PERFORMANCE">PERFORMANCE</button>
+      <button class="qbtn sel" data-q="HIGH">HIGH · SSAO</button>
+      <button class="qbtn" data-q="ULTRA">ULTRA · SSR</button>
+    </div>
+    <div class="stack">
+      <button class="btn" id="btnResume">Resume</button>
+      <button class="btn cy" id="btnCtlPause" style="display:none">Controls: Touch Pads</button>
+      <button class="btn cy" id="btnRestart">Restart Mission</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEATH -->
+<div id="death" class="overlay translucent hidden">
+  <div class="panelCard" id="deathCard">
+    <h2>SIGNAL <b>LOST</b></h2>
+    <div class="sub2 mono" id="deathReason">AIRFRAME DESTROYED</div>
+    <div class="stack">
+      <button class="btn" id="btnRetry">Redeploy</button>
+      <button class="btn cy" id="btnAbort">Abort to Title</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEVEL COMPLETE -->
+<div id="clear" class="overlay translucent hidden">
+  <div class="panelCard">
+    <h2>OBJECTIVE <b>SECURED</b></h2>
+    <div class="sub2 mono" id="clearSub">PROCEEDING TO NEXT PHASE</div>
+    <div class="stats" id="clearStats"></div>
+    <div class="stack"><button class="btn" id="btnNext">Continue</button></div>
+  </div>
+</div>
+
+<!-- WIN -->
+<div id="win" class="overlay hidden">
+  <div class="panelCard">
+    <h2>PROTOCOL <b>BROKEN</b></h2>
+    <div class="sub2 mono">SITE NADIR NEUTRALIZED — SENTINEL EXFIL CONFIRMED</div>
+    <div class="stats" id="winStats"></div>
+    <div class="stack">
+      <button class="btn" id="btnAgain">Run It Again</button>
+    </div>
+  </div>
+  <div style="margin-top:26px;font-size:11px;letter-spacing:.5em;color:var(--cyan);opacity:.6" class="mono">VERTASCAN // BLACKOUT PROTOCOL</div>
+</div>
+
+<!-- TOUCH CONTROLS -->
+<div id="touchUI">
+  <div id="stickL"><div id="stickNub"></div></div>
+  <div class="tbtn amber" id="tFire">FIRE</div>
+  <div class="tbtn" id="tRail">RAIL</div>
+  <div class="tbtn amber" id="tEmp">EMP</div>
+  <div id="tRock">
+    <div class="tbtn" id="tAsc">&#9650;</div>
+    <div class="tbtn" id="tDsc">&#9660;</div>
+  </div>
+  <div class="tbtn amber" id="tThr">THRUST</div>
+  <div id="tStrip">
+    <div class="tbtn" id="tWpn">WPN 1</div>
+    <div class="tbtn" id="tClk">CLK</div>
+    <div class="tbtn" id="tSrg">SRG</div>
+    <div class="tbtn" id="tCal">CAL</div>
+    <div class="tbtn" id="tPause">| |</div>
+  </div>
+  <div id="tiltHint">TILT TO STEER &middot; TAP = FIRE &middot; FLICK UP = RAIL LANCE</div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+  <div id="objPanel">
+    <div class="hd">MISSION DIRECTIVES</div>
+    <div id="objList"></div>
+    <div id="missionTimer" class="mono"></div>
+  </div>
+  <div id="alertWrap">
+    <div id="alertState">GHOST</div>
+    <div id="alertBarWrap"><div id="alertBar"></div></div>
+  </div>
+  <div id="vitals" class="mono">
+    <div class="vrow"><div class="lab"><span>SHIELD</span><span id="tShield">75</span></div><div class="vbar" id="bShield"><i style="width:100%"></i></div></div>
+    <div class="vrow"><div class="lab"><span>HULL</span><span id="tHull">100</span></div><div class="vbar" id="bHull"><i style="width:100%"></i></div></div>
+    <div class="vrow"><div class="lab"><span>ENERGY</span><span id="tEnergy">100</span></div><div class="vbar" id="bEnergy"><i style="width:100%"></i></div></div>
+    <div class="vrow"><div class="lab"><span>HEAT</span><span id="tHeat">0</span></div><div class="vbar" id="bHeat"><i style="width:0%"></i></div></div>
+  </div>
+  <div id="flight">
+    <div id="modeTag">GLIDE</div>
+    <div id="telem">VEL 00.0 · ALT 000.0</div>
+  </div>
+  <div id="wep" class="mono">
+    <div class="w sel" id="w1"><b>1</b> ION LANCE · SILENT</div>
+    <div class="w" id="w2"><b>2</b> PULSE REPEATER · LOUD</div>
+    <div class="w"><b>RMB</b> RAIL LANCE · CHARGE</div>
+    <div class="w"><b>E</b> EMP BURST</div>
+  </div>
+  <div id="radarWrap"><div id="radarLab">TACTICAL</div><canvas id="radar" width="170" height="170"></canvas></div>
+  <div id="nvTag" class="mono">NV-OPTIC <b>▮</b> LIDAR ACTIVE</div>
+  <div id="cross">
+    <svg viewBox="0 0 300 300">
+      <circle cx="150" cy="150" r="140" fill="none" stroke="#4fd1c5" stroke-width="1.5" opacity=".38"/>
+      <circle cx="150" cy="150" r="140" fill="none" stroke="#4fd1c5" stroke-width="9" opacity=".45"
+        pathLength="360" stroke-dasharray="0.6 14.4"/>
+      <circle cx="150" cy="150" r="140" fill="none" stroke="#4fd1c5" stroke-width="15" opacity=".6"
+        pathLength="360" stroke-dasharray="1.4 88.6"/>
+      <g class="scopeSpin" opacity=".32">
+        <path d="M150 26 A124 124 0 0 1 274 150" fill="none" stroke="#4fd1c5" stroke-width="2"/>
+        <path d="M150 274 A124 124 0 0 1 26 150" fill="none" stroke="#4fd1c5" stroke-width="2"/>
+      </g>
+      <circle id="chargeRing" cx="150" cy="150" r="120" fill="none" stroke="#ff7a1a" stroke-width="3"
+        stroke-dasharray="754" stroke-dashoffset="754" transform="rotate(-90 150 150)"/>
+      <path d="M150 98 L150 128 M150 172 L150 202 M98 150 L128 150 M172 150 L202 150"
+        stroke="#4fd1c5" stroke-width="1.6" opacity=".9"/>
+      <path d="M150 141 L146 150 L150 159 L154 150 Z" fill="none" stroke="#4fd1c5" stroke-width="1.2" opacity=".7"/>
+      <circle cx="150" cy="150" r="2.1" fill="#4fd1c5"/>
+    </svg>
+  </div>
+  <div id="scopeData" class="mono">RNG ——.— · HDG 000°</div>
+  <div id="hitmark"></div>
+  <div id="msg"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
+import { SSRPass } from 'three/addons/postprocessing/SSRPass.js';
+
+/* ============================================================
+   VERTASCAN // BLACKOUT PROTOCOL — v5 WEB EDITION
+   AGV-Sentinel Alpha — anti-gravity covert strike
+   Single-file build. Loads ./blue.glb (drone) and
+   ./mantaray-XHD.glb (hostile MRV interceptor — procedural orb
+   fallback engages automatically if the manta is absent).
+   NEW IN v4: MRV-CLASS "MANTA" hostiles (bigger airframes, hover
+   bank/bob animation), BLACKSITE HANGAR mission 02 — a top-secret
+   surface base the Sentinel flies INTO — rotating radar dishes,
+   landing pads, comm domes, and a 5-mission campaign.
+   ============================================================ */
+
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const damp=(a,b,l,dt)=>lerp(a,b,1-Math.exp(-l*dt));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const TWO_PI=Math.PI*2;
+
+/* ---------------- error shield ---------------- */
+window.addEventListener('error',e=>{
+  const b=$('bootLog'); if(b){const d=document.createElement('div');d.innerHTML='<b>FAULT</b> '+String(e.message).slice(0,120);b.appendChild(d);}
+});
+
+/* ---------------- boot key art (optional: blackoutprotocol.jpg) ---------------- */
+(function(){
+  const a=new Image();
+  a.onload=()=>{ const el=$('bootArt');
+    el.style.backgroundImage="url('blackoutprotocol.jpg')"; el.style.opacity='1';
+    $('boot').classList.add('hasArt'); // baked title takes over; HTML heading hides
+  };
+  a.src='blackoutprotocol.jpg'; // onerror: silent fallback to the text boot screen
+})();
+
+/* ---------------- quality profiles ---------------- */
+const QUALITY={
+  PERFORMANCE:{pixelRatio:1,ssao:false,ssr:false,bloomStrength:.65,shadows:false,particles:.5},
+  HIGH:{pixelRatio:1.5,ssao:true,ssr:false,bloomStrength:.85,shadows:true,particles:1},
+  ULTRA:{pixelRatio:2,ssao:false,ssr:true,bloomStrength:.95,shadows:true,particles:1}
+};
+let qualityName=(('ontouchstart' in window)||navigator.maxTouchPoints>0)?'PERFORMANCE':'HIGH', Q=QUALITY[qualityName];
+
+/* ---------------- audio synth (procedural SFX) ---------------- */
+const AudioSys={
+  ctx:null,master:null,
+  ensure(){ if(this.ctx)return; try{
+    this.ctx=new (window.AudioContext||window.webkitAudioContext)();
+    this.master=this.ctx.createGain(); this.master.gain.value=.5; this.master.connect(this.ctx.destination);
+  }catch(e){} },
+  env(g,t0,a,d,peak=1){ g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(peak,t0+a); g.gain.exponentialRampToValueAtTime(.0001,t0+a+d); },
+  zap(freq=880,dur=.14,vol=.35,slide=.4){ if(!this.ctx)return; const t=this.ctx.currentTime;
+    const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    o.type='sawtooth'; o.frequency.setValueAtTime(freq,t); o.frequency.exponentialRampToValueAtTime(freq*slide,t+dur);
+    this.env(g,t,.005,dur,vol); o.connect(g).connect(this.master); o.start(t); o.stop(t+dur+.05); },
+  noiseBurst(dur=.5,vol=.5,lp=1200){ if(!this.ctx)return; const t=this.ctx.currentTime,sr=this.ctx.sampleRate;
+    const buf=this.ctx.createBuffer(1,sr*dur,sr),d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+    const s=this.ctx.createBufferSource(); s.buffer=buf;
+    const f=this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(lp,t); f.frequency.exponentialRampToValueAtTime(80,t+dur);
+    const g=this.ctx.createGain(); this.env(g,t,.005,dur,vol);
+    s.connect(f).connect(g).connect(this.master); s.start(t); },
+  emp(){ if(!this.ctx)return; const t=this.ctx.currentTime;
+    const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(60,t); o.frequency.exponentialRampToValueAtTime(900,t+.35); o.frequency.exponentialRampToValueAtTime(40,t+.9);
+    this.env(g,t,.02,.9,.5); o.connect(g).connect(this.master); o.start(t); o.stop(t+1);
+    this.noiseBurst(.6,.25,3000); },
+  alarm(){ if(!this.ctx)return; const t=this.ctx.currentTime;
+    for(let i=0;i<2;i++){ const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+      o.type='square'; o.frequency.setValueAtTime(520,t+i*.28); o.frequency.setValueAtTime(392,t+i*.28+.14);
+      this.env(g,t+i*.28,.01,.24,.16); o.connect(g).connect(this.master); o.start(t+i*.28); o.stop(t+i*.28+.3);} },
+  charge(dur){ if(!this.ctx)return; const t=this.ctx.currentTime;
+    const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    o.type='sawtooth'; o.frequency.setValueAtTime(120,t); o.frequency.exponentialRampToValueAtTime(1400,t+dur);
+    g.gain.setValueAtTime(.001,t); g.gain.exponentialRampToValueAtTime(.22,t+dur);
+    o.connect(g).connect(this.master); o.start(t); o.stop(t+dur+.02); this._chg={o,g}; },
+  chargeStop(){ if(this._chg){ try{this._chg.g.gain.cancelScheduledValues(0);this._chg.g.gain.value=0;this._chg.o.stop();}catch(e){} this._chg=null; } },
+  ping(f=1200,v=.18){ this.zap(f,.09,v,1.2); },
+
+  /* ============ SOUNDTRACK ============
+     Loops ./blackoutprotocol.mp3 when hosted beside index.html.
+     Absent, synthesizes an ominous procedural score:
+     beating sub drones + dissonant pad + deep heartbeat pulse,
+     with a tension layer driven by the global awareness meter. */
+  musicBytes:null, musicStarted:false, musicGain:null, tensionGain:null,
+  _tLast:0, _thumpIv:null,
+  async fetchMusic(){ // called during boot — bytes only, no AudioContext needed yet
+    try{
+      const r=await fetch('blackoutprotocol.mp3');
+      if(r.ok){ this.musicBytes=await r.arrayBuffer(); return true; }
+    }catch(e){}
+    return false;
+  },
+  async startMusic(){ // requires a user gesture first (ensure() called)
+    if(this.musicStarted||!this.ctx)return;
+    this.musicStarted=true;
+    this.musicGain=this.ctx.createGain(); this.musicGain.gain.value=.55;
+    this.musicGain.connect(this.master);
+    if(this.musicBytes){
+      try{
+        const buf=await this.ctx.decodeAudioData(this.musicBytes.slice(0));
+        const src=this.ctx.createBufferSource();
+        src.buffer=buf; src.loop=true;
+        src.connect(this.musicGain); src.start();
+        this._buildTension(); // tension layer rides on top, very quiet
+        return;
+      }catch(e){ /* corrupt file — fall through to synth */ }
+    }
+    this._buildScore();
+    this._buildTension();
+  },
+  _mkNoise(){ const sr=this.ctx.sampleRate, buf=this.ctx.createBuffer(1,sr*2,sr), d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    const s=this.ctx.createBufferSource(); s.buffer=buf; s.loop=true; return s; },
+  _lfo(freq,depth,base,param){ const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    o.frequency.value=freq; g.gain.value=depth; param.value=base;
+    o.connect(g).connect(param); o.start(); },
+  _buildScore(){
+    const c=this.ctx, out=this.musicGain;
+    // beating sub drones — 55Hz vs 58.27Hz, a queasy slow throb
+    const subLP=c.createBiquadFilter(); subLP.type='lowpass'; subLP.frequency.value=170;
+    subLP.connect(out);
+    for(const [f,g] of [[55,.15],[58.27,.11],[36.71,.09]]){
+      const o=c.createOscillator(),gg=c.createGain();
+      o.type='sine'; o.frequency.value=f; gg.gain.value=g;
+      o.connect(gg).connect(subLP); o.start();
+    }
+    // dissonant pad — A minor smeared with a flat 9th, breathing through a filter
+    const padLP=c.createBiquadFilter(); padLP.type='lowpass'; padLP.frequency.value=420; padLP.Q.value=1.1;
+    const padG=c.createGain(); padG.gain.value=.05;
+    padLP.connect(padG).connect(out);
+    for(const [f,g] of [[110,.9],[130.81,.7],[164.81,.6],[116.54,.32]]){
+      const o=c.createOscillator(),gg=c.createGain();
+      o.type='sawtooth'; o.frequency.value=f; o.detune.value=rand(-6,6); gg.gain.value=g;
+      o.connect(gg).connect(padLP); o.start();
+    }
+    this._lfo(.045,260,460,padLP.frequency); // slow breathing sweep
+    // subterranean wind
+    const wind=this._mkNoise();
+    const windBP=c.createBiquadFilter(); windBP.type='bandpass'; windBP.frequency.value=420; windBP.Q.value=.6;
+    const windG=c.createGain(); windG.gain.value=.045;
+    wind.connect(windBP).connect(windG).connect(out); wind.start();
+    this._lfo(.03,320,520,windBP.frequency);
+    // deep heartbeat — every 2.6s the mountain remembers you're inside it
+    this._thumpIv=setInterval(()=>{
+      if(!this.ctx||this.ctx.state!=='running')return;
+      const t=this.ctx.currentTime;
+      const o=c.createOscillator(),g=c.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(48,t); o.frequency.exponentialRampToValueAtTime(27,t+.4);
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.3,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+.55);
+      o.connect(g).connect(out); o.start(t); o.stop(t+.6);
+    },2600);
+  },
+  _buildTension(){
+    const c=this.ctx;
+    this.tensionGain=c.createGain(); this.tensionGain.gain.value=0;
+    this.tensionGain.connect(this.musicGain);
+    // shivering minor-second cluster
+    const hp=c.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=300;
+    hp.connect(this.tensionGain);
+    for(const f of [220,233.08,311.13]){
+      const o=c.createOscillator(),g=c.createGain(),trem=c.createOscillator(),tg=c.createGain();
+      o.type='sawtooth'; o.frequency.value=f; g.gain.value=.05;
+      trem.frequency.value=rand(5,7); tg.gain.value=.03; trem.connect(tg).connect(g.gain);
+      o.connect(g).connect(hp); o.start(); trem.start();
+    }
+    // urgent sub pulse
+    const po=c.createOscillator(),pg=c.createGain(),plfo=c.createOscillator(),plg=c.createGain();
+    po.type='sine'; po.frequency.value=55; pg.gain.value=0;
+    plfo.type='square'; plfo.frequency.value=2.2; plg.gain.value=.09;
+    plfo.connect(plg).connect(pg.gain);
+    po.connect(pg).connect(this.tensionGain); po.start(); plfo.start();
+  },
+  setTension(v){ // v 0..1 — follows the awareness meter
+    if(!this.tensionGain||!this.ctx)return;
+    v=clamp(v,0,1);
+    if(Math.abs(v-this._tLast)<.02)return;
+    this._tLast=v;
+    this.tensionGain.gain.setTargetAtTime(v*(this.musicBytes?.35:.85),this.ctx.currentTime,1.1);
+  },
+  duckMusic(v,fast){ if(this.musicGain&&this.ctx)
+    this.musicGain.gain.setTargetAtTime(.55*v,this.ctx.currentTime,fast?.15:.6); }
+};
+
+/* ---------------- renderer / scene ---------------- */
+const canvas=$('gl');
+let renderer;
+try{
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+}catch(e){ document.body.innerHTML='<div style="color:#ff7a1a;font-family:monospace;padding:40px">WEBGL UNAVAILABLE — '+e.message+'</div>'; throw e; }
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1,Q.pixelRatio));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.3;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x030507);
+const camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,1000);
+camera.position.set(0,8,14);
+
+const pmrem=new THREE.PMREMGenerator(renderer);
+scene.environment=pmrem.fromScene(new RoomEnvironment(),.06).texture;
+scene.environmentIntensity=.72;
+
+/* ---------------- world containers ---------------- */
+const worldGroup=new THREE.Group(); scene.add(worldGroup);   // level geometry
+const fxGroup=new THREE.Group(); scene.add(fxGroup);         // beams, pulses
+
+/* ---- sensor-FX registry ----
+   Non-solid meshes (wireframes, detection cones, beacons, particles, beams)
+   must NOT be baked into SSAO/SSR depth-normal buffers as solid geometry —
+   that reads as grey halo lines smeared across the frame. They stay visible
+   in the beauty render; we hide them only during the passes' internal
+   override renders. */
+const sensorFX=new Set([fxGroup]);
+const colliders=[];          // {box:Box3, mesh?}   static AABBs
+const losMeshes=[];          // meshes used for line-of-sight raycasts
+const reflectiveMeshes=[];   // SSR selects
+const raycaster=new THREE.Raycaster();
+
+function addCollider(mesh,pad=0){
+  mesh.updateWorldMatrix(true,false);
+  const box=new THREE.Box3().setFromObject(mesh);
+  if(pad)box.expandByScalar(pad);
+  colliders.push({box,mesh});
+  losMeshes.push(mesh);
+}
+function clearWorld(){
+  worldGroup.traverse(o=>{ if(o.geometry&&!o.userData.shared)o.geometry.dispose(); });
+  worldGroup.clear(); fxGroup.clear();
+  colliders.length=0; losMeshes.length=0; reflectiveMeshes.length=0;
+  for(const o of [...sensorFX]){ // drop refs whose root is no longer the scene
+    let r=o; while(r.parent)r=r.parent;
+    if(r!==scene)sensorFX.delete(o);
+  }
+}
+
+/* ---------------- LIDAR wireframe optic ----------------
+   Everything the sensor sees — except the Sentinel itself — carries a
+   faded cyan wireframe. Overlays share the base mesh's geometry and ride
+   as children so they track moving objects (doors, orbs) for free. */
+const lidarMat=new THREE.MeshBasicMaterial({wireframe:true,color:0x4fd1c5,transparent:true,
+  opacity:.075,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,toneMapped:false});
+lidarMat.userData={shared:true};
+function lidarify(root){
+  const targets=[];
+  root.traverse(o=>{
+    if(o.isMesh&&!o.userData.lidar&&!o.userData.lidarDone&&o.material&&o.material.isMeshStandardMaterial){
+      if(o.material.emissiveIntensity>1)return; // glow strips / cores stay clean
+      targets.push(o);
+    }
+  });
+  for(const o of targets){
+    o.userData.lidarDone=true;
+    if(o.isInstancedMesh){
+      // polygonOffset doesn't affect GL lines — inflate a geometry clone instead
+      const g2=o.geometry.clone(); g2.scale(1.006,1.006,1.006);
+      const w=new THREE.InstancedMesh(g2,lidarMat,o.count);
+      w.instanceMatrix=o.instanceMatrix; // share the matrix attribute — static field, zero copy
+      w.userData.lidar=true; w.frustumCulled=false; // unshared geo clone → disposed on level clear
+      o.parent.add(w); sensorFX.add(w);
+    }else{
+      const w=new THREE.Mesh(o.geometry,lidarMat);
+      w.scale.setScalar(1.0045); // lift lines off the surface — kills beauty-pass z-fighting
+      w.userData.lidar=true; w.userData.shared=true;
+      o.add(w); sensorFX.add(w);
+    }
+  }
+}
+
+/* ---------------- particle engine ---------------- */
+class ParticlePool{
+  constructor(count,size=1,blending=THREE.AdditiveBlending){
+    this.count=count; this.cursor=0;
+    this.pos=new Float32Array(count*3);
+    this.vel=new Float32Array(count*3);
+    this.col=new Float32Array(count*3);
+    this.life=new Float32Array(count);   // remaining
+    this.maxLife=new Float32Array(count);
+    this.size=new Float32Array(count);
+    this.grav=new Float32Array(count);
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(this.pos,3));
+    g.setAttribute('aColor',new THREE.BufferAttribute(this.col,3));
+    g.setAttribute('aAlpha',new THREE.BufferAttribute(this.life,1)); // reused as alpha src
+    g.setAttribute('aSize',new THREE.BufferAttribute(this.size,1));
+    const mat=new THREE.ShaderMaterial({
+      transparent:true,depthWrite:false,blending,
+      uniforms:{},
+      vertexShader:`attribute vec3 aColor;attribute float aAlpha;attribute float aSize;
+        varying vec3 vC;varying float vA;
+        void main(){vC=aColor;vA=aAlpha;
+        vec4 mv=modelViewMatrix*vec4(position,1.0);
+        gl_PointSize=aSize*(260.0/-mv.z);
+        gl_Position=projectionMatrix*mv;}`,
+      fragmentShader:`varying vec3 vC;varying float vA;
+        void main(){vec2 d=gl_PointCoord-.5;float r=length(d);
+        float a=smoothstep(.5,.05,r)*clamp(vA,0.,1.);
+        if(a<.01)discard;
+        gl_FragColor=vec4(vC,a);}`
+    });
+    this.points=new THREE.Points(g,mat);
+    this.points.frustumCulled=false;
+    scene.add(this.points);
+    sensorFX.add(this.points);
+  }
+  spawn(p,v,color,life,size,grav=0){
+    const i=this.cursor; this.cursor=(this.cursor+1)%this.count;
+    this.pos.set([p.x,p.y,p.z],i*3);
+    this.vel.set([v.x,v.y,v.z],i*3);
+    this.col.set([color.r,color.g,color.b],i*3);
+    this.life[i]=1; this.maxLife[i]=life; this.size[i]=size; this.grav[i]=grav;
+  }
+  update(dt){
+    const {pos,vel,life,maxLife,grav}=this;
+    for(let i=0;i<this.count;i++){
+      if(life[i]<=0)continue;
+      life[i]-=dt/maxLife[i];
+      const j=i*3;
+      vel[j+1]-=grav[i]*dt;
+      pos[j]+=vel[j]*dt; pos[j+1]+=vel[j+1]*dt; pos[j+2]+=vel[j+2]*dt;
+    }
+    const g=this.points.geometry;
+    g.attributes.position.needsUpdate=true;
+    g.attributes.aAlpha.needsUpdate=true;
+    g.attributes.aColor.needsUpdate=true;
+    g.attributes.aSize.needsUpdate=true;
+  }
+}
+let sparks, trail, rain=null;
+const C_CYAN=new THREE.Color(0x4fd1c5), C_AMBER=new THREE.Color(0xff7a1a),
+      C_RED=new THREE.Color(0xff2d3a), C_VIOLET=new THREE.Color(0xb26bff),
+      C_WHITE=new THREE.Color(0xffffff);
+
+function burst(p,color,n=24,speed=14,life=.7,size=2.2,grav=9){
+  for(let i=0;i<n;i++){
+    const v=new THREE.Vector3(rand(-1,1),rand(-1,1),rand(-1,1)).normalize().multiplyScalar(rand(speed*.3,speed));
+    sparks.spawn(p,v,color,life*rand(.6,1.2),size*rand(.6,1.4),grav);
+  }
+}
+
+/* ---------------- shockwave / EMP mesh fx ---------------- */
+const pulseFX=[];
+function spawnPulse(p,color,maxR=25,dur=.55){
+  const geo=new THREE.SphereGeometry(1,26,18);
+  const mat=new THREE.ShaderMaterial({
+    transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+    uniforms:{uC:{value:new THREE.Color(color)},uA:{value:1}},
+    vertexShader:`varying vec3 vN;varying vec3 vV;
+      void main(){vN=normalize(normalMatrix*normal);
+      vec4 mv=modelViewMatrix*vec4(position,1.);vV=normalize(-mv.xyz);
+      gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`uniform vec3 uC;uniform float uA;varying vec3 vN;varying vec3 vV;
+      void main(){float f=pow(1.-abs(dot(vN,vV)),2.2);
+      gl_FragColor=vec4(uC,f*uA);}`
+  });
+  const m=new THREE.Mesh(geo,mat); m.position.copy(p); fxGroup.add(m);
+  pulseFX.push({m,t:0,dur,maxR});
+}
+function updatePulses(dt){
+  for(let i=pulseFX.length-1;i>=0;i--){
+    const p=pulseFX[i]; p.t+=dt; const k=p.t/p.dur;
+    if(k>=1){ fxGroup.remove(p.m); p.m.geometry.dispose(); p.m.material.dispose(); pulseFX.splice(i,1); continue; }
+    p.m.scale.setScalar(.5+p.maxR*k);
+    p.m.material.uniforms.uA.value=1-k;
+  }
+}
+
+/* ---------------- asset loading ---------------- */
+const gltfLoader=new GLTFLoader();
+let droneTemplate=null, droneAnims=[], orbTemplate=null, orbFromFile=false;
+
+const bootLines=[
+  'VERTASCAN SECURE BOOT v9.2 ......... <b>OK</b>',
+  'ANTI-GRAV CORE HANDSHAKE ........... <b>OK</b>',
+  'DECRYPTING AIRFRAME: blue.glb',
+];
+function bootLog(html){
+  const d=document.createElement('div'); d.innerHTML=html;
+  const box=$('bootLog'); box.appendChild(d);
+  while(box.children.length>8)box.removeChild(box.firstChild);
+}
+async function loadAssets(){
+  let li=0; const iv=setInterval(()=>{ if(li<bootLines.length)bootLog(bootLines[li++]); },260);
+  // drone (required)
+  const droneGltf=await new Promise((res,rej)=>{
+    gltfLoader.load('blue.glb',res,xhr=>{
+      if(xhr.total){ const p=Math.round(xhr.loaded/xhr.total*100);
+        $('bar').style.width=p+'%'; $('bootPct').textContent=p+'% — AGV-SENTINEL ALPHA'; }
+    },rej);
+  }).catch(e=>{ bootLog('<b>FAULT</b> blue.glb not found beside index.html'); throw e; });
+  clearInterval(iv);
+  bootLog('AIRFRAME INTEGRITY ................. <b>OK</b>');
+  droneTemplate=droneGltf.scene; droneAnims=droneGltf.animations;
+  droneTemplate.traverse(o=>{
+    if(o.isMesh){
+      o.castShadow=true; o.receiveShadow=false;
+      const m=o.material;
+      if(m&&m.emissive&&(m.emissive.r>0||m.emissive.g>0||m.emissive.b>0)){
+        m.emissiveIntensity=3.2; // red blinkers feed the bloom pass
+      }
+      if(m&&m.name==='glass'){ m.roughness=.05; m.envMapIntensity=2.0; }
+    }
+  });
+  // hostile MRV interceptor (optional — procedural orb fallback)
+  bootLog('SCANNING FOR HOSTILE SIGNATURE: mantaray-XHD.glb');
+  const orbGltf=await new Promise(res=>{
+    gltfLoader.load('mantaray-XHD.glb',res,xhr=>{
+      if(xhr.total){ const p=Math.round(xhr.loaded/xhr.total*100);
+        $('bar').style.width=p+'%'; $('bootPct').textContent=p+'% — MRV MANTA SIGNATURE'; }
+    },()=>res(null));
+  });
+  if(orbGltf){ orbTemplate=orbGltf.scene; orbFromFile=true;
+    orbTemplate.traverse(o=>{ if(o.isMesh){
+      o.castShadow=true;
+      const mats=Array.isArray(o.material)?o.material:[o.material];
+      mats.forEach(m=>{ // burners / plane emission / lights feed the bloom pass
+        if(m&&m.emissive&&(m.emissive.r>0||m.emissive.g>0||m.emissive.b>0))
+          m.emissiveIntensity=Math.max(m.emissiveIntensity||1,2.4);
+      });
+    }});
+    bootLog('MRV "MANTA" AIRFRAME ACQUIRED ...... <b>OK</b>');
+  }else{
+    bootLog('mantaray-XHD.glb ABSENT — <b>SYNTHESIZING</b> PROCEDURAL SHELL');
+  }
+  bootLog('SCANNING FOR SCORE: blackoutprotocol.mp3');
+  const gotMusic=await AudioSys.fetchMusic();
+  bootLog(gotMusic?'SOUNDTRACK ACQUIRED ................ <b>OK</b>'
+                  :'blackoutprotocol.mp3 ABSENT — <b>SYNTHESIZING</b> OMINOUS SCORE');
+  bootLog('ALL SYSTEMS NOMINAL — <b>PROTOCOL ARMED</b>');
+  $('assetNote').textContent=(orbFromFile?'HOSTILE ASSET: mantaray-XHD.glb LOADED':'HOSTILE ASSET: PROCEDURAL FALLBACK — DROP mantaray-XHD.glb BESIDE index.html TO OVERRIDE')
+    +'  ·  '+(gotMusic?'SCORE: blackoutprotocol.mp3':'SCORE: PROCEDURAL SYNTH — DROP blackoutprotocol.mp3 TO OVERRIDE');
+}
+
+/* procedural ORB fallback — biomech containment sphere */
+function buildProceduralOrb(){
+  const g=new THREE.Group();
+  const shellMat=new THREE.MeshStandardMaterial({color:0x1c2126,metalness:1,roughness:.32});
+  const shell=new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),shellMat);
+  shell.castShadow=true; g.add(shell);
+  const plateMat=new THREE.MeshStandardMaterial({color:0x2c343b,metalness:1,roughness:.22,flatShading:true});
+  const plates=new THREE.Mesh(new THREE.IcosahedronGeometry(1.06,0),plateMat);
+  plates.castShadow=true; g.add(plates);
+  const coreMat=new THREE.MeshStandardMaterial({color:0x111111,metalness:0,roughness:.4,
+    emissive:0x4fd1c5,emissiveIntensity:2.6,name:'orb_core'});
+  const core=new THREE.Mesh(new THREE.SphereGeometry(.52,20,14),coreMat); g.add(core);
+  const ringMat=new THREE.MeshStandardMaterial({color:0x14181c,metalness:1,roughness:.18});
+  const r1=new THREE.Mesh(new THREE.TorusGeometry(1.22,.06,10,42),ringMat); g.add(r1);
+  const r2=r1.clone(); r2.rotation.x=Math.PI/2; g.add(r2);
+  const eyeMat=new THREE.MeshStandardMaterial({color:0x050505,metalness:.6,roughness:.3,
+    emissive:0x4fd1c5,emissiveIntensity:3,name:'orb_core'});
+  const eye=new THREE.Mesh(new THREE.CylinderGeometry(.16,.3,.34,16),eyeMat);
+  eye.rotation.x=Math.PI/2; eye.position.z=1.02; g.add(eye);
+  g.userData.rings=[r1,r2];
+  return g;
+}
+/* Blender exports commonly face +Z in glTF while the ORB rig steers +Z-forward.
+   If the manta flies nose-backwards, set MANTA_YAW_FIX to 0. */
+const MANTA_YAW_FIX=Math.PI;
+/* MRV manta wingspan at type-scale 1. The Sentinel's airframe is 3.4u wide —
+   the manta reads as a genuinely bigger hostile at ~2.1x that span, before
+   WARDEN (1.7x) and HIVE (2.3x) multipliers stack on top. */
+const MANTA_SPAN=7.2;
+/* clone template + isolate emissive materials so each orb tints independently */
+function makeOrbMesh(tintHex){
+  const src=orbTemplate||buildProceduralOrb();
+  const root=orbTemplate?src.clone(true):src; // procedural is built fresh each call
+  if(orbTemplate)root.rotation.y=MANTA_YAW_FIX;
+  const emis=[];
+  root.traverse(o=>{
+    if(o.isMesh&&o.material){
+      const mats=Array.isArray(o.material)?o.material:[o.material];
+      const cloned=mats.map(m=>{
+        if(m.emissive&&(m.emissiveIntensity>0)&&(m.name==='orb_core'||m.emissive.getHex()!==0)){
+          const c=m.clone(); c.emissive=new THREE.Color(tintHex); c.emissiveIntensity=2.6; emis.push(c); return c;
+        }
+        return m;
+      });
+      o.material=Array.isArray(o.material)?cloned:cloned[0];
+    }
+  });
+  if(emis.length===0){ // manta GLB had no emissive parts — add a core beacon
+    const core=new THREE.Mesh(new THREE.SphereGeometry(.35,16,12),
+      new THREE.MeshStandardMaterial({emissive:tintHex,emissiveIntensity:3,color:0x050505}));
+    root.add(core); emis.push(core.material);
+  }
+  // normalize: manta by wingspan (bigger, imposing), procedural by diagonal
+  const bb=new THREE.Box3().setFromObject(root);
+  const sz=bb.getSize(new THREE.Vector3());
+  const s=orbTemplate ? MANTA_SPAN/Math.max(sz.x,1e-4) : 2.9/(sz.length()||1);
+  root.scale.multiplyScalar(s);
+  const bb2=new THREE.Box3().setFromObject(root);
+  root.position.sub(bb2.getCenter(new THREE.Vector3()));
+  const wrap=new THREE.Group(); wrap.add(root);
+  wrap.userData.emis=emis; wrap.userData.inner=root;
+  // body hit radius at type-scale 1 — bolts should connect with the visual hull
+  const sz2=bb2.getSize(new THREE.Vector3());
+  wrap.userData.hitR=orbTemplate ? Math.max(1.6,Math.max(sz2.x,sz2.z)*.38) : 1.6;
+  return wrap;
+}
+
+/* ---------------- player ---------------- */
+const player={
+  rig:new THREE.Group(), model:null, mixer:null,
+  pos:new THREE.Vector3(0,8,0), vel:new THREE.Vector3(),
+  yaw:0,pitch:0, radius:1.7,
+  shield:75,shieldMax:75, hull:100,hullMax:100,
+  energy:100,energyMax:100, heat:0,overheated:false,
+  cloak:false, nullDrop:false, surge:false,
+  weapon:1, fireCd:0, charging:false, chargeT:0,
+  lastDamage:-9, dead:false, engineLight:null,
+};
+scene.add(player.rig);
+
+/* Blender exports commonly face +Z in glTF while gameplay-forward here is -Z.
+   Your previous VERTASCAN airframes needed this 180° fix. If the Sentinel
+   flies nose-backwards, set DRONE_YAW_FIX to 0. */
+const DRONE_YAW_FIX=Math.PI;
+function setupDrone(){
+  const root=new THREE.Group();
+  droneTemplate.rotation.y=DRONE_YAW_FIX;
+  root.add(droneTemplate);
+  // normalize: center + width ≈ 3.4u
+  const bb=new THREE.Box3().setFromObject(droneTemplate);
+  const size=bb.getSize(new THREE.Vector3());
+  const s=3.4/Math.max(size.x,1e-4);
+  droneTemplate.scale.multiplyScalar(s);
+  const bb2=new THREE.Box3().setFromObject(droneTemplate);
+  droneTemplate.position.sub(bb2.getCenter(new THREE.Vector3()));
+  player.model=root; player.rig.add(root);
+  // CRITICAL: Blender exported one action per part — play ALL 50 simultaneously
+  player.mixer=new THREE.AnimationMixer(droneTemplate);
+  droneAnims.forEach(clip=>{
+    const a=player.mixer.clipAction(clip);
+    a.setLoop(THREE.LoopRepeat); a.timeScale=.55; a.play();
+  });
+  // anti-grav underglow + engine light
+  const eng=new THREE.PointLight(0x4fd1c5,14,16,2);
+  eng.position.set(0,-1.1,0); root.add(eng); player.engineLight=eng;
+  const nav=new THREE.PointLight(0xff7a1a,6,10,2); nav.position.set(0,.4,-1.4); root.add(nav);
+}
+
+/* signature multiplier — how visible the Sentinel is to ORBs */
+function playerSignature(){
+  if(player.cloak)return .12;
+  if(player.nullDrop)return .35;
+  if(player.surge)return 1.9;
+  const spd=player.vel.length();
+  return spd<2? .55 : 1.0;
+}
+
+/* ---------------- input ---------------- */
+const keys={};
+let mouseDX=0,mouseDY=0, lmb=false, rmbHeld=false;
+addEventListener('keydown',e=>{
+  if(e.repeat)return; keys[e.code]=true;
+  if(game.state==='PLAY'){
+    if(e.code==='Digit1'){player.weapon=1;selWeapon();}
+    if(e.code==='Digit2'){player.weapon=2;selWeapon();}
+    if(e.code==='KeyC'){toggleCloak();}
+    if(e.code==='KeyE'){fireEMP();}
+    if(e.code==='KeyP'||e.code==='Escape'){pauseGame();}
+  }
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;lmb=false;rmbHeld=false;if(game.state==='PLAY')pauseGame();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&game.state==='PLAY')pauseGame();});
+window.addEventListener('blur',()=>{if(game.state==='PLAY')pauseGame();});
+addEventListener('mousemove',e=>{
+  if(document.pointerLockElement===canvas){ mouseDX+=e.movementX; mouseDY+=e.movementY; }
+});
+addEventListener('mousedown',e=>{
+  if(game.state!=='PLAY'||document.pointerLockElement!==canvas)return;
+  if(e.button===0)lmb=true;
+  if(e.button===2&&!player.overheated&&!player.cloak){ rmbHeld=true; player.charging=true; player.chargeT=0; AudioSys.charge(1.1); }
+});
+addEventListener('mouseup',e=>{
+  if(e.button===0)lmb=false;
+  if(e.button===2){ rmbHeld=false; if(player.charging)releaseRail(); }
+});
+addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('pointerlockchange',()=>{
+  if(!MOBILE.active&&document.pointerLockElement!==canvas&&game.state==='PLAY')pauseGame();
+});
+function selWeapon(){
+  $('w1').classList.toggle('sel',player.weapon===1);
+  $('w2').classList.toggle('sel',player.weapon===2);
+  AudioSys.ping(900,.12);
+}
+function toggleCloak(){
+  if(!player.cloak&&player.energy<15){flashMsg('INSUFFICIENT ENERGY');return;}
+  player.cloak=!player.cloak;
+  setDroneOpacity(player.cloak?.16:1);
+  AudioSys.ping(player.cloak?400:700,.2);
+  flashMsg(player.cloak?'CLOAK FIELD ENGAGED':'CLOAK FIELD DOWN');
+}
+function setDroneOpacity(op){
+  if(!player.model)return;
+  player.model.traverse(o=>{
+    if(o.isMesh){ const mats=Array.isArray(o.material)?o.material:[o.material];
+      mats.forEach(m=>{ m.transparent=op<1; m.opacity=op; m.depthWrite=op>=.5; }); }
+  });
+  player.engineLight.intensity=op<1?3:14;
+}
+
+/* ---------------- mobile controls ----------------
+   Two schemes on touch devices, switchable on title + pause:
+   PADS — left thumb = analog thrust stick (appears where you touch),
+          right thumb drag = aim, on-screen FIRE / RAIL / ASC / DSC /
+          WPN / CLK / EMP / SRG buttons.
+   TILT — tilt the device to steer (roll = yaw, pitch = climb/dive),
+          hold THRUST to fly, TAP anywhere = fire, FLICK UP = instant
+          rail lance. CAL re-zeros the neutral grip angle.
+   Both schemes feed the same variables the keyboard/mouse path uses. */
+const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+const MOBILE={active:IS_TOUCH,scheme:'PADS'};
+const vpad={mx:0,my:0,asc:0,fire:false};
+const tilt={granted:false,b:0,g:0,b0:null,g0:null,thrust:false};
+const touchPts={}; let stickId=null,lookId=null,surgeLatch=false;
+
+function tiltRead(){
+  if(tilt.b0===null)return{roll:0,pitch:0};
+  const a=(screen.orientation&&screen.orientation.angle)??(window.orientation||0);
+  let roll,pitch;
+  if(a===90){ roll=tilt.b-tilt.b0; pitch=-(tilt.g-tilt.g0); }
+  else if(a===-90||a===270){ roll=-(tilt.b-tilt.b0); pitch=tilt.g-tilt.g0; }
+  else if(a===180){ roll=-(tilt.g-tilt.g0); pitch=-(tilt.b-tilt.b0); }
+  else { roll=tilt.g-tilt.g0; pitch=tilt.b-tilt.b0; }
+  const dz=v=>{ v=clamp(v/26,-1,1); return Math.abs(v)<.08?0:v; };
+  return {roll:dz(roll),pitch:dz(pitch)};
+}
+function calibrateTilt(){ tilt.b0=tilt.b; tilt.g0=tilt.g; }
+function onDevOri(e){
+  tilt.b=e.beta||0; tilt.g=e.gamma||0;
+  if(tilt.b0===null)calibrateTilt();
+}
+async function enableTilt(){
+  try{
+    if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+      if((await DeviceOrientationEvent.requestPermission())!=='granted')return false;
+    }
+  }catch(err){ return false; }
+  if(!tilt.granted){ addEventListener('deviceorientation',onDevOri); tilt.granted=true; }
+  return true;
+}
+function quickRail(){ // flick gesture — pre-charged lance snap
+  if(player.overheated||player.cloak||player.dead)return;
+  player.charging=true; player.chargeT=.85; releaseRail();
+}
+function layoutTouchUI(){
+  const pads=MOBILE.scheme==='PADS';
+  $('tFire').style.display=pads?'flex':'none';
+  $('tRail').style.display=pads?'flex':'none';
+  $('tThr').style.display=pads?'none':'flex';
+  $('tCal').style.display=pads?'none':'flex';
+  $('tiltHint').style.display=pads?'none':'block';
+}
+function syncCtlButtons(){
+  const t='Controls: '+(MOBILE.scheme==='PADS'?'Touch Pads':'Tilt-to-Fly');
+  $('btnCtl').textContent=t; $('btnCtlPause').textContent=t;
+}
+async function cycleControlScheme(){
+  const next=MOBILE.scheme==='PADS'?'TILT':'PADS';
+  if(next==='TILT'){
+    if(!(await enableTilt())){ flashMsg('TILT SENSOR UNAVAILABLE'); return; }
+    calibrateTilt();
+  }
+  MOBILE.scheme=next; layoutTouchUI(); syncCtlButtons();
+  AudioSys.ping(900,.12);
+}
+/* on-screen buttons — hold + tap wiring */
+function bindHold(id,down,up){
+  const el=$(id);
+  el.addEventListener('pointerdown',e=>{
+    e.preventDefault(); e.stopPropagation();
+    el.setPointerCapture(e.pointerId); el.classList.add('held'); down&&down(e);
+  });
+  const end=e=>{ e.stopPropagation(); el.classList.remove('held'); up&&up(e); };
+  el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end);
+}
+if(IS_TOUCH){
+  bindHold('tFire',()=>vpad.fire=true,()=>vpad.fire=false);
+  bindHold('tRail',()=>{ if(game.state==='PLAY'&&!player.overheated&&!player.cloak){ rmbHeld=true; player.charging=true; player.chargeT=0; AudioSys.charge(1.1); } },
+                   ()=>{ rmbHeld=false; if(player.charging)releaseRail(); });
+  bindHold('tThr',()=>tilt.thrust=true,()=>tilt.thrust=false);
+  bindHold('tCal',()=>{ calibrateTilt(); flashMsg('TILT CALIBRATED'); });
+  bindHold('tAsc',()=>vpad.asc=1,()=>vpad.asc=0);
+  bindHold('tDsc',()=>vpad.asc=-1,()=>vpad.asc=0);
+  bindHold('tWpn',()=>{ player.weapon=player.weapon===1?2:1; selWeapon(); $('tWpn').textContent='WPN '+player.weapon; });
+  bindHold('tClk',()=>toggleCloak());
+  bindHold('tEmp',()=>fireEMP());
+  bindHold('tSrg',()=>{ surgeLatch=!surgeLatch; keys['ShiftLeft']=surgeLatch; }); // tap-toggle — a hold doesn't belong on the top edge
+  bindHold('tPause',()=>pauseGame());
+  $('btnCtl').style.display=''; $('btnCtlPause').style.display='';
+  $('btnCtl').onclick=cycleControlScheme; $('btnCtlPause').onclick=cycleControlScheme;
+  layoutTouchUI(); syncCtlButtons();
+  $('btnQuality').textContent='Quality: '+qualityName[0]+qualityName.slice(1).toLowerCase();
+}
+/* free-touch gameplay layer: stick spawn / aim drag / tap / flick */
+function tdown(e){
+  if(!MOBILE.active||game.state!=='PLAY'||e.pointerType==='mouse')return;
+  e.preventDefault();
+  const p={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,t0:performance.now(),mode:'tap'};
+  if(MOBILE.scheme==='PADS'){
+    if(e.clientX<innerWidth*.45&&stickId===null){
+      stickId=e.pointerId; p.mode='stick';
+      const s=$('stickL'); s.style.display='block';
+      s.style.left=(e.clientX-62)+'px'; s.style.top=(e.clientY-62)+'px';
+      $('stickNub').style.left='37px'; $('stickNub').style.top='37px';
+    }else if(lookId===null){ lookId=e.pointerId; p.mode='look'; }
+  }
+  touchPts[e.pointerId]=p;
+}
+function tmove(e){
+  const p=touchPts[e.pointerId]; if(!p)return;
+  e.preventDefault();
+  if(p.mode==='stick'){
+    let dx=e.clientX-p.x0, dy=e.clientY-p.y0;
+    const l=Math.hypot(dx,dy), R=52;
+    if(l>R){ dx*=R/l; dy*=R/l; }
+    vpad.mx=dx/R; vpad.my=-dy/R;
+    $('stickNub').style.left=(37+dx)+'px'; $('stickNub').style.top=(37+dy)+'px';
+  }else if(p.mode==='look'){
+    mouseDX+=(e.clientX-p.x)*2.6; mouseDY+=(e.clientY-p.y)*2.6;
+  }
+  p.x=e.clientX; p.y=e.clientY;
+}
+function tup(e){
+  const p=touchPts[e.pointerId]; if(!p)return;
+  if(p.mode==='stick'){ stickId=null; vpad.mx=0; vpad.my=0; $('stickL').style.display='none'; }
+  if(p.mode==='look')lookId=null;
+  if(MOBILE.scheme==='TILT'&&p.mode==='tap'&&game.state==='PLAY'){
+    const dt=performance.now()-p.t0, dx=e.clientX-p.x0, dy=e.clientY-p.y0;
+    if(dt<300&&dy<-70&&Math.abs(dy)>Math.abs(dx)){ quickRail(); }           // flick up
+    else if(dt<260&&Math.hypot(dx,dy)<16){ vpad.fire=true; setTimeout(()=>vpad.fire=false,150); } // tap
+  }
+  delete touchPts[e.pointerId];
+}
+addEventListener('pointerdown',tdown,{passive:false});
+addEventListener('pointermove',tmove,{passive:false});
+addEventListener('pointerup',tup);
+addEventListener('pointercancel',tup);
+
+/* ---------------- movement + collision ---------------- */
+const tmpV=new THREE.Vector3(), tmpV2=new THREE.Vector3(), tmpQ=new THREE.Quaternion();
+function resolveCollisions(pos,radius){
+  let grounded=false;
+  for(const c of colliders){
+    const cp=tmpV.copy(pos).clamp(c.box.min,c.box.max);
+    const d=tmpV2.subVectors(pos,cp); const dl=d.length();
+    if(dl<radius){
+      if(dl<1e-5){ d.set(0,1,0); }
+      else d.divideScalar(dl);
+      pos.addScaledVector(d,radius-dl+.01);
+      const vn=player.vel.dot(d);
+      if(vn<0)player.vel.addScaledVector(d,-vn*1.05);
+      if(d.y>.6)grounded=true;
+    }
+  }
+  return grounded;
+}
+function updatePlayer(dt){
+  if(player.dead)return;
+  // look
+  const sens=.0021;
+  player.yaw-=mouseDX*sens; player.pitch-=mouseDY*sens;
+  player.pitch=clamp(player.pitch,-1.25,1.25);
+  mouseDX=0; mouseDY=0;
+
+  player.surge=!!keys['ShiftLeft']&&!player.nullDrop;
+  player.nullDrop=!!keys['KeyF'];
+
+  const fwd=tmpV.set(-Math.sin(player.yaw),0,-Math.cos(player.yaw));
+  const right=tmpV2.set(fwd.z,0,-fwd.x).negate();
+  const acc=new THREE.Vector3();
+  if(keys['KeyW'])acc.add(fwd);
+  if(keys['KeyS'])acc.sub(fwd);
+  if(keys['KeyD'])acc.add(right);
+  if(keys['KeyA'])acc.sub(right);
+  if(keys['Space'])acc.y+=1;
+  if(keys['KeyX'])acc.y-=1;
+  // mobile: analog stick vector / tilt-to-fly attitude
+  if(MOBILE.active){
+    if(MOBILE.scheme==='PADS'){
+      if(vpad.mx||vpad.my){ acc.addScaledVector(fwd,vpad.my); acc.addScaledVector(right,vpad.mx); }
+    }else{
+      const R=tiltRead();
+      player.yaw-=R.roll*2.1*dt;                                   // roll device = steer
+      player.pitch=damp(player.pitch,clamp(-R.pitch*.95,-1.1,1.1),3,dt); // pitch device = nose up/down
+      acc.y+=clamp(-R.pitch*1.15,-1,1);                            // ...and climb/dive
+      if(tilt.thrust)acc.add(fwd);
+    }
+    acc.y+=vpad.asc;
+  }
+  if(acc.lengthSq()>0)acc.normalize();
+
+  const lvl=game.level;
+  let maxSpd=player.surge?42:22, power=player.surge?64:34;
+  if(player.cloak){maxSpd*=.75;power*=.75;}
+  if(player.nullDrop){
+    player.vel.y-=32*dt;                    // gravity — anti-grav killed
+    acc.multiplyScalar(.18); power*=.5;     // minimal authority
+  }
+  player.vel.addScaledVector(acc,power*dt);
+  // drag
+  const drag=player.nullDrop?.35:2.6;
+  player.vel.multiplyScalar(Math.max(0,1-drag*dt));
+  const spd=player.vel.length();
+  if(spd>maxSpd&&!player.nullDrop)player.vel.multiplyScalar(maxSpd/spd);
+
+  player.pos.addScaledVector(player.vel,dt);
+  // level bounds + floor
+  if(lvl){
+    player.pos.x=clamp(player.pos.x,lvl.bounds.min.x,lvl.bounds.max.x);
+    player.pos.z=clamp(player.pos.z,lvl.bounds.min.z,lvl.bounds.max.z);
+    player.pos.y=clamp(player.pos.y,lvl.bounds.min.y,lvl.bounds.max.y);
+    if(lvl.cylinderBound){
+      const r=Math.hypot(player.pos.x,player.pos.z);
+      const maxR=lvl.cylinderBound-player.radius;
+      if(r>maxR){ const k=maxR/r; player.pos.x*=k; player.pos.z*=k;
+        const n=tmpV.set(player.pos.x,0,player.pos.z).normalize();
+        const vn=player.vel.dot(n); if(vn>0)player.vel.addScaledVector(n,-vn); }
+    }
+    const floorY=lvl.floorY!==undefined?lvl.floorY:0;
+    if(player.pos.y<floorY+player.radius){
+      player.pos.y=floorY+player.radius;
+      if(player.nullDrop&&player.vel.y<-20){ damagePlayer(Math.abs(player.vel.y)*.6,'IMPACT'); }
+      player.vel.y=Math.max(0,player.vel.y);
+    }
+    if(lvl.killY!==undefined&&player.pos.y<lvl.killY)killPlayer('LOST IN THE DEEP');
+  }
+  const hitWall=resolveCollisions(player.pos,player.radius);
+  if(hitWall&&spd>26)damagePlayer((spd-26)*.8,'HULL SCRAPE');
+
+  // rig transform + banking
+  player.rig.position.copy(player.pos);
+  const targetYaw=player.yaw;
+  player.rig.rotation.y=targetYaw;
+  if(player.model){
+    const latVel=player.vel.dot(right);
+    const fwdVel=player.vel.dot(fwd);
+    player.model.rotation.z=damp(player.model.rotation.z,clamp(-latVel*.035,-.55,.55),6,dt);
+    player.model.rotation.x=damp(player.model.rotation.x,clamp(fwdVel*.016-player.vel.y*.012,-.4,.4),6,dt);
+  }
+  if(player.mixer)player.mixer.update(dt*(player.surge?1.7:1));
+
+  // energy / heat
+  if(player.cloak){
+    player.energy-=12*dt;
+    if(player.energy<=0){player.energy=0;toggleCloak();}
+  }else{
+    player.energy=Math.min(player.energyMax,player.energy+8*dt);
+  }
+  player.heat=Math.max(0,player.heat-26*dt);
+  if(player.overheated&&player.heat<30){player.overheated=false;flashMsg('WEAPONS ONLINE');}
+  // shield regen
+  if(game.time-player.lastDamage>4)
+    player.shield=Math.min(player.shieldMax,player.shield+15*dt);
+
+  // ion wake trail
+  if(Math.random()<(player.surge?.9:.45)){
+    const back=tmpV.set(Math.sin(player.yaw),0,Math.cos(player.yaw));
+    const p=tmpV2.copy(player.pos).addScaledVector(back,1.6); p.y-=.6;
+    trail.spawn(p,new THREE.Vector3(rand(-.5,.5),rand(-.8,-.2),rand(-.5,.5)),
+      player.cloak?C_VIOLET:C_CYAN,rand(.4,.8),player.surge?2.6:1.6,0);
+  }
+  player.engineLight.intensity=(player.cloak?3:14)+(player.surge?8:0)+Math.sin(game.time*20)*1.5;
+
+  // weapons
+  player.fireCd-=dt;
+  if((lmb||vpad.fire)&&!player.overheated&&!player.cloak)fireWeapon();
+  if(player.charging){
+    player.chargeT=Math.min(1.1,player.chargeT+dt);
+    $('chargeRing').style.strokeDashoffset=754*(1-clamp(player.chargeT/1.1,0,1));
+  }
+}
+
+/* ---------------- projectiles ---------------- */
+const bolts=[]; // {mesh,vel,life,dmg,hostile,color,noise}
+const boltGeo=new THREE.CapsuleGeometry(.09,1.1,3,8); boltGeo.rotateX(Math.PI/2);
+function spawnBolt(pos,dir,speed,dmg,color,hostile,noise){
+  const mat=new THREE.MeshBasicMaterial({color,toneMapped:false});
+  const m=new THREE.Mesh(boltGeo,mat);
+  m.position.copy(pos);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),dir);
+  fxGroup.add(m);
+  bolts.push({mesh:m,vel:dir.clone().multiplyScalar(speed),life:2.4,dmg,hostile,color:new THREE.Color(color),noise});
+}
+function aimDir(){
+  raycaster.setFromCamera({x:0,y:0},camera);
+  const target=tmpV.copy(raycaster.ray.direction).multiplyScalar(300).add(raycaster.ray.origin);
+  return target.sub(player.pos).normalize();
+}
+function muzzlePos(){ return tmpV2.copy(player.pos).addScaledVector(aimDirCache,2.4); }
+let aimDirCache=new THREE.Vector3(0,0,-1);
+function fireWeapon(){
+  if(player.fireCd>0)return;
+  aimDirCache=aimDir().clone();
+  const spread=player.weapon===1?.006:.018;
+  const d=aimDirCache.clone().add(new THREE.Vector3(rand(-spread,spread),rand(-spread,spread),rand(-spread,spread))).normalize();
+  if(player.weapon===1){ // ION LANCE — silent
+    spawnBolt(muzzlePos(),d,150,26,0x4fd1c5,false,0);
+    player.fireCd=.19; player.heat+=7; AudioSys.zap(1300,.08,.16,.5);
+  }else{               // PULSE REPEATER — loud
+    spawnBolt(muzzlePos(),d,120,11,0xff7a1a,false,60);
+    player.fireCd=.085; player.heat+=4; AudioSys.zap(520,.1,.28,.6);
+    awareness.noiseAt(player.pos,60,8);
+  }
+  if(player.heat>=100){player.overheated=true;player.heat=100;flashMsg('THERMAL LOCKOUT');AudioSys.noiseBurst(.3,.3,600);}
+}
+function releaseRail(){
+  AudioSys.chargeStop();
+  const k=player.chargeT; player.charging=false;
+  $('chargeRing').style.strokeDashoffset=754;
+  if(k<.35){return;}
+  aimDirCache=aimDir().clone();
+  const origin=player.pos.clone().addScaledVector(aimDirCache,2.4);
+  raycaster.set(origin,aimDirCache); raycaster.far=400;
+  // hit orbs / pylons first
+  let bestOrb=null,bestPylon=null,bestT=1e9;
+  for(const o of orbs){
+    if(o.dead)continue;
+    const t=raySphere(origin,aimDirCache,o.pos,o.hitR);
+    if(t!==null&&t<bestT){bestT=t;bestOrb=o;bestPylon=null;}
+  }
+  for(const p of pylons){
+    if(p.dead)continue;
+    const t=raySphere(origin,aimDirCache,p.pos,2.4);
+    if(t!==null&&t<bestT){bestT=t;bestPylon=p;bestOrb=null;}
+  }
+  const wallHits=raycaster.intersectObjects(losMeshes,false);
+  let end;
+  if((bestOrb||bestPylon)&&(!wallHits.length||bestT<wallHits[0].distance)){
+    end=origin.clone().addScaledVector(aimDirCache,bestT);
+    if(bestOrb)damageOrb(bestOrb,90*k+40,true);
+    else pylonHitCheck(end,90*k+40);
+  }else if(wallHits.length){ end=wallHits[0].point; burst(end,C_AMBER,20,16,.5,2.4,10); }
+  else end=origin.clone().addScaledVector(aimDirCache,400);
+  railBeam(origin,end);
+  player.heat+=55; if(player.heat>=100){player.overheated=true;player.heat=100;}
+  awareness.noiseAt(player.pos,110,26);
+  AudioSys.zap(180,.4,.5,.15); AudioSys.noiseBurst(.35,.4,2400);
+  shake(.6);
+}
+const beams=[];
+function railBeam(a,b){
+  const len=a.distanceTo(b);
+  const geo=new THREE.CylinderGeometry(.14,.14,len,10,1,true);
+  geo.rotateX(Math.PI/2);
+  const mat=new THREE.MeshBasicMaterial({color:0xffb066,transparent:true,opacity:1,toneMapped:false,blending:THREE.AdditiveBlending,depthWrite:false});
+  const m=new THREE.Mesh(geo,mat);
+  m.position.copy(a).add(b).multiplyScalar(.5);
+  m.lookAt(b); fxGroup.add(m);
+  const core=m.clone(); core.material=mat.clone(); core.material.color.set(0xffffff); core.scale.set(.4,.4,1); m.add(core);
+  beams.push({m,t:0});
+  for(let i=0;i<Math.floor(len/4);i++){
+    const p=a.clone().lerp(b,i/(len/4));
+    sparks.spawn(p,new THREE.Vector3(rand(-2,2),rand(-2,2),rand(-2,2)),C_AMBER,.4,1.6,4);
+  }
+}
+function raySphere(o,d,c,r){
+  const oc=tmpV.subVectors(o,c);
+  const b=oc.dot(d); const cc=oc.lengthSq()-r*r;
+  const h=b*b-cc; if(h<0)return null;
+  const t=-b-Math.sqrt(h); return t>0?t:null;
+}
+function fireEMP(){
+  if(player.energy<35){flashMsg('INSUFFICIENT ENERGY');return;}
+  player.energy-=35;
+  spawnPulse(player.pos,0xb26bff,30,.7);
+  $('empFlash').style.opacity=1; setTimeout(()=>$('empFlash').style.opacity=0,180);
+  AudioSys.emp(); shake(.4);
+  for(const o of orbs){
+    if(o.dead)continue;
+    if(o.pos.distanceTo(player.pos)<30){ o.disable(8); }
+  }
+  awareness.noiseAt(player.pos,40,6);
+}
+function updateBolts(dt){
+  for(let i=bolts.length-1;i>=0;i--){
+    const b=bolts[i]; b.life-=dt;
+    b.mesh.position.addScaledVector(b.vel,dt);
+    let kill=b.life<=0;
+    if(!kill){
+      if(b.hostile){
+        if(b.mesh.position.distanceTo(player.pos)<player.radius+.4){
+          damagePlayer(b.dmg,'ORB FIRE'); burst(b.mesh.position,C_RED,10,8,.4,1.8,6); kill=true;
+        }
+      }else{
+        for(const o of orbs){
+          if(o.dead)continue;
+          if(b.mesh.position.distanceTo(o.pos)<o.hitR){
+            damageOrb(o,b.dmg,false);
+            if(b.noise)awareness.noiseAt(b.mesh.position,30,6);
+            burst(b.mesh.position,b.color,12,10,.4,1.8,6); kill=true; break;
+          }
+        }
+      }
+      if(!kill){ // wall check (cheap: collider AABBs)
+        for(const c of colliders){
+          if(c.box.containsPoint(b.mesh.position)){ burst(b.mesh.position,b.color,8,8,.35,1.6,8); kill=true; break; }
+        }
+        if(!kill&&game.level&&b.mesh.position.y<(game.level.floorY??0)){ kill=true; burst(b.mesh.position,b.color,8,8,.35,1.6,8); }
+      }
+    }
+    if(kill){ fxGroup.remove(b.mesh); b.mesh.material.dispose(); bolts.splice(i,1); }
+  }
+  for(let i=beams.length-1;i>=0;i--){
+    const bm=beams[i]; bm.t+=dt;
+    bm.m.material.opacity=Math.max(0,1-bm.t/.3);
+    if(bm.t>.3){ fxGroup.remove(bm.m); beams.splice(i,1); }
+  }
+}
+
+/* ---------------- damage ---------------- */
+let shakeAmt=0;
+function shake(a){shakeAmt=Math.max(shakeAmt,a);}
+function damagePlayer(d,why){
+  if(player.dead)return;
+  player.lastDamage=game.time;
+  if(player.shield>0){ const s=Math.min(player.shield,d); player.shield-=s; d-=s; }
+  player.hull-=d;
+  $('dmgVig').style.opacity=.9; setTimeout(()=>$('dmgVig').style.opacity=0,140);
+  shake(.35); AudioSys.noiseBurst(.2,.25,900);
+  if(player.hull<=0)killPlayer(why);
+}
+function killPlayer(why){
+  if(player.dead)return;
+  player.dead=true; game.stats.deaths++;
+  burst(player.pos,C_AMBER,60,22,1.1,3,8);
+  burst(player.pos,C_CYAN,40,16,.9,2.4,8);
+  spawnPulse(player.pos,0xff7a1a,20,.6);
+  AudioSys.noiseBurst(1,.6,700);
+  setDroneOpacity(0);
+  setTimeout(()=>{ $('deathReason').textContent=why||'AIRFRAME DESTROYED'; show('death'); game.state='DEATH';
+    AudioSys.duckMusic(.3);
+    document.exitPointerLock&&document.exitPointerLock(); },900);
+}
+
+/* ---------------- ORB enemies ---------------- */
+const ORB_TYPES={
+  WATCHER:{tint:0x4fd1c5,hp:60, range:52, cone:.5,  speed:7,  fireCd:1.4, dmg:8,  scale:1,   score:'watcher'},
+  HUNTER: {tint:0xff7a1a,hp:95, range:64, cone:.62, speed:16, fireCd:.55, dmg:10, scale:1.1, score:'hunter'},
+  WARDEN: {tint:0xff2d3a,hp:200,range:58, cone:.55, speed:5,  fireCd:1.0, dmg:16, scale:1.7, score:'warden', shielded:true},
+  HIVE:   {tint:0xb26bff,hp:300,range:60, cone:.7,  speed:0,  fireCd:2.2, dmg:9,  scale:2.3, score:'hive',   spawner:true},
+};
+const orbs=[];
+let losTick=0;
+class Orb{
+  constructor(type,pos,waypoints){
+    const T=ORB_TYPES[type];
+    this.type=type; this.T=T;
+    this.hp=T.hp; this.dead=false;
+    this.pos=pos.clone(); this.home=pos.clone();
+    this.waypoints=waypoints||null; this.wpi=0;
+    this.state='PATROL'; this.suspicion=0;
+    this.fireT=rand(0,T.fireCd);
+    this.disabledT=0; this.spawnT=6;
+    this.losOk=false; this.losT=rand(0,.2);
+    this.lastSeen=new THREE.Vector3();
+    this.shielded=!!T.shielded;
+    this.group=makeOrbMesh(T.tint);
+    this.hitR=(this.group.userData.hitR||1.6)*T.scale;
+    this.group.scale.setScalar(T.scale);
+    this.group.position.copy(pos);
+    worldGroup.add(this.group);
+    // detection cone
+    const cg=new THREE.ConeGeometry(Math.tan(T.cone)*T.range*.5, T.range*.5, 26,1,true);
+    cg.translate(0,-T.range*.25,0); cg.rotateX(-Math.PI/2);
+    this.coneMat=new THREE.MeshBasicMaterial({color:T.tint,transparent:true,opacity:.05,
+      side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false});
+    this.cone=new THREE.Mesh(cg,this.coneMat);
+    this.group.add(this.cone); sensorFX.add(this.cone);
+    // shield bubble for wardens
+    if(this.shielded){
+      this.shieldMesh=new THREE.Mesh(new THREE.SphereGeometry(this.hitR*1.15/T.scale,20,14),
+        new THREE.MeshBasicMaterial({color:0xff2d3a,transparent:true,opacity:.14,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false}));
+      this.group.add(this.shieldMesh); sensorFX.add(this.shieldMesh);
+    }
+    this.light=new THREE.PointLight(T.tint,4,14,2);
+    this.group.add(this.light);
+    lidarify(this.group); // covers mid-mission hive spawns too
+    this.vel=new THREE.Vector3();
+    this.facing=new THREE.Vector3(0,0,1);
+  }
+  tint(hex,intensity=2.6){
+    this.group.userData.emis.forEach(m=>{ if(m.emissive){m.emissive.setHex(hex);m.emissiveIntensity=intensity;} else if(m.color)m.color.setHex(hex); });
+    this.coneMat.color.setHex(hex);
+    this.light.color.setHex(hex);
+  }
+  disable(t){
+    if(this.dead)return;
+    this.disabledT=Math.max(this.disabledT,t);
+    this.state='DISABLED'; this.suspicion=0;
+    if(this.shielded){ this.shielded=false; if(this.shieldMesh)this.shieldMesh.visible=false; }
+    this.tint(0x334044,.4); this.coneMat.opacity=0;
+    burst(this.pos,C_VIOLET,16,8,.6,2,4);
+  }
+  canSee(){
+    const T=this.T;
+    const to=tmpV.subVectors(player.pos,this.pos);
+    const dist=to.length();
+    const effRange=T.range*playerSignature();
+    if(dist>effRange)return false;
+    to.divideScalar(dist);
+    if(this.facing.dot(to)<Math.cos(T.cone))return false;
+    return this.losOk;
+  }
+  updateLOS(){
+    raycaster.set(this.pos,tmpV.subVectors(player.pos,this.pos).normalize());
+    raycaster.far=this.pos.distanceTo(player.pos)-1;
+    this.losOk=raycaster.intersectObjects(losMeshes,false).length===0;
+  }
+  update(dt){
+    if(this.dead)return;
+    const T=this.T;
+    // spin rings if procedural / hover-language if manta
+    const inner=this.group.userData.inner;
+    if(inner&&inner.userData&&inner.userData.rings){
+      inner.userData.rings[0].rotation.z+=dt*.8;
+      inner.userData.rings[1].rotation.y+=dt*.6;
+    }else if(inner&&orbFromFile){
+      // MRV manta: bank into lateral velocity + idle anti-grav bob
+      const side=tmpV.set(this.facing.z,0,-this.facing.x); // facing × up
+      const bank=clamp(-this.vel.dot(side)*.045,-.5,.5);
+      inner.rotation.z=damp(inner.rotation.z,bank,4,dt);
+      inner.position.y=Math.sin(game.time*1.7+this.home.x*.7)*.28;
+      inner.rotation.x=Math.sin(game.time*1.1+this.home.z)*.04;
+    }
+    if(this.disabledT>0){
+      this.disabledT-=dt;
+      this.pos.y=damp(this.pos.y,Math.max((game.level.floorY??0)+2,this.home.y-4),1.2,dt);
+      this.group.position.copy(this.pos);
+      if(Math.random()<.1)sparks.spawn(this.pos,new THREE.Vector3(rand(-3,3),rand(-1,3),rand(-3,3)),C_VIOLET,.4,1.6,8);
+      if(this.disabledT<=0){ this.state='PATROL'; this.tint(T.tint); this.coneMat.opacity=.05; }
+      return;
+    }
+    // terminal-phase lockdown: the grid already knows — every unit hunts
+    if(game.level.forceLockdown&&this.state!=='HUNT'){
+      this.state='HUNT'; this.suspicion=1; this.lastSeen.copy(player.pos); this.tint(0xff2d3a);
+    }
+    this.losT-=dt;
+    if(this.losT<=0){ this.losT=.18; this.updateLOS(); }
+    const seen=this.canSee();
+    if(seen){ this.suspicion=Math.min(1,this.suspicion+dt*(this.state==='HUNT'?4:1.4)*playerSignature());
+      this.lastSeen.copy(player.pos); }
+    else this.suspicion=Math.max(0,this.suspicion-dt*.25);
+
+    if(this.suspicion>=1&&this.state!=='HUNT'){
+      this.state='HUNT'; awareness.spot(this);
+      this.tint(0xff2d3a); this.coneMat.color.setHex(0xff2d3a);
+    }else if(this.suspicion>.35&&this.state==='PATROL'){
+      this.state='SCAN'; AudioSys.ping(1500,.1);
+    }else if(this.suspicion<=0&&this.state!=='PATROL'){
+      this.state='PATROL'; this.tint(T.tint);
+    }
+    this.coneMat.opacity=.04+this.suspicion*.16+(this.state==='HUNT'?.06:0);
+
+    // movement
+    const target=tmpV2;
+    let want=false, spd=T.speed;
+    if(this.state==='PATROL'&&this.waypoints){
+      target.copy(this.waypoints[this.wpi]); want=true;
+      if(this.pos.distanceTo(target)<3)this.wpi=(this.wpi+1)%this.waypoints.length;
+    }else if(this.state==='SCAN'){
+      target.copy(this.lastSeen); want=true; spd*=.8;
+    }else if(this.state==='HUNT'){
+      target.copy(player.pos); want=true; spd*=1.15;
+      // hunters strafe
+      if(this.type==='HUNTER'){
+        const side=tmpV.subVectors(player.pos,this.pos).cross(new THREE.Vector3(0,1,0)).normalize();
+        target.addScaledVector(side,Math.sin(game.time*1.7+this.home.x)*12);
+      }
+      // keep standoff
+      if(this.pos.distanceTo(player.pos)<10+this.hitR*2)target.copy(this.pos).addScaledVector(tmpV.subVectors(this.pos,player.pos).normalize(),6);
+    }
+    if(want&&spd>0){
+      const dir=target.sub(this.pos);
+      const d=dir.length();
+      if(d>.5){ dir.divideScalar(d);
+        this.vel.addScaledVector(dir,spd*2*dt);
+        const vl=this.vel.length(); if(vl>spd)this.vel.multiplyScalar(spd/vl);
+      }else this.vel.multiplyScalar(.9);
+    }else this.vel.multiplyScalar(.92);
+    this.pos.addScaledVector(this.vel,dt);
+    const fy=(game.level.floorY??0)+2.2;
+    if(this.pos.y<fy)this.pos.y=fy;
+    this.group.position.copy(this.pos);
+
+    // facing
+    let face=this.vel.lengthSq()>.4?tmpV.copy(this.vel).normalize():null;
+    if(this.state==='HUNT'||this.state==='SCAN')face=tmpV.subVectors(this.state==='HUNT'?player.pos:this.lastSeen,this.pos).normalize();
+    if(!face&&this.waypoints)face=tmpV.subVectors(this.waypoints[this.wpi],this.pos).normalize();
+    if(face&&face.lengthSq()>0){
+      this.facing.copy(face);
+      const q=tmpQ.setFromUnitVectors(new THREE.Vector3(0,0,1),face);
+      this.group.quaternion.slerp(q,1-Math.exp(-5*dt));
+    }
+    // fire
+    if(this.state==='HUNT'&&seen){
+      this.fireT-=dt;
+      if(this.fireT<=0){
+        this.fireT=T.fireCd*rand(.85,1.2);
+        const dir=tmpV.subVectors(player.pos,this.pos).normalize();
+        dir.x+=rand(-.03,.03);dir.y+=rand(-.03,.03);dir.z+=rand(-.03,.03);dir.normalize();
+        spawnBolt(this.pos.clone().addScaledVector(dir,this.hitR+.4),dir,70,T.dmg,T.tint,true,0);
+        AudioSys.zap(300+Math.random()*120,.12,.14,.7);
+      }
+    }
+    // hive spawns hunters while global alert
+    if(T.spawner&&awareness.value>40){
+      this.spawnT-=dt;
+      if(this.spawnT<=0&&orbs.filter(o=>!o.dead&&o.spawnedBy===this).length<3){
+        this.spawnT=12;
+        const h=new Orb('HUNTER',this.pos.clone().add(new THREE.Vector3(rand(-3,3),2,rand(-3,3))));
+        h.spawnedBy=this; h.suspicion=1; h.state='HUNT'; h.tint(0xff2d3a);
+        orbs.push(h); spawnPulse(this.pos,0xb26bff,8,.4);
+        flashMsg('HIVE SPAWNING INTERCEPTORS');
+      }
+    }
+    this.light.intensity=3+this.suspicion*5+(this.state==='HUNT'?3:0);
+    if(this.shieldMesh&&this.shielded)this.shieldMesh.material.opacity=.1+Math.sin(game.time*6)*.05;
+  }
+}
+function damageOrb(o,d,pierce){
+  if(o.dead)return;
+  if(o.shielded&&!pierce){
+    burst(o.pos,C_RED,8,8,.3,1.6,4);
+    flashMsg('WARDEN SHIELDED — EMP TO BREACH'); return;
+  }
+  if(o.shielded&&pierce)d*=.5;
+  o.hp-=d; o.suspicion=Math.min(1,o.suspicion+.5);
+  const hm=$('hitmark'); hm.classList.remove('pop'); void hm.offsetWidth; hm.classList.add('pop');
+  if(o.hp<=0){
+    o.dead=true; game.stats.kills++;
+    burst(o.pos,new THREE.Color(o.T.tint),34,18,.9,2.6,8);
+    burst(o.pos,C_WHITE,14,10,.5,2,8);
+    spawnPulse(o.pos,o.T.tint,10,.45);
+    AudioSys.noiseBurst(.5,.45,900);
+    worldGroup.remove(o.group);
+    awareness.noiseAt(o.pos,45,10);
+    shake(.2);
+  }
+}
+
+/* ---------------- awareness (global stealth state) ---------------- */
+const awareness={
+  value:0, // 0..100
+  spot(orb){
+    this.value=Math.max(this.value,78);
+    AudioSys.alarm(); flashMsg('CONTACT — SENTINEL SPOTTED'); game.stats.alerts++;
+    for(const o of orbs){ if(!o.dead&&o.type==='HUNTER'&&o.pos.distanceTo(orb.pos)<120){ o.suspicion=1; o.state='HUNT'; o.lastSeen.copy(player.pos); o.tint(0xff2d3a);} }
+  },
+  noiseAt(p,radius,amount){
+    for(const o of orbs){
+      if(o.dead||o.disabledT>0)continue;
+      const d=o.pos.distanceTo(p);
+      if(d<radius){ o.suspicion=Math.min(1,o.suspicion+amount/100*(1-d/radius)*3); o.lastSeen.copy(p);
+        if(o.state==='PATROL')o.state='SCAN'; }
+    }
+    this.value=Math.min(100,this.value+amount*.3);
+  },
+  update(dt){
+    let seen=false, maxSus=0;
+    for(const o of orbs){ if(o.dead)continue; maxSus=Math.max(maxSus,o.suspicion); if(o.state==='HUNT'&&o.canSee())seen=true; }
+    if(seen)this.value=Math.min(100,this.value+26*dt);
+    else this.value=Math.max(maxSus*45,this.value-(this.value>75?2.5:6)*dt);
+    if(game.level&&game.level.forceLockdown)this.value=Math.max(this.value,80);
+    const w=$('alertWrap'), s=$('alertState');
+    w.className=''; let label='GHOST';
+    if(this.value>=75){label='LOCKDOWN';w.className='s3';}
+    else if(this.value>=50){label='ALERT';w.className='s3';}
+    else if(this.value>=25){label='SUSPICIOUS';w.className='s2';}
+    s.textContent=label;
+    $('alertBar').style.width=this.value+'%';
+  }
+};
+
+/* ---------------- level framework ---------------- */
+const MAT={
+  wall:new THREE.MeshStandardMaterial({color:0x161b20,metalness:.85,roughness:.5}),
+  wallLit:new THREE.MeshStandardMaterial({color:0x10141a,metalness:.9,roughness:.35,emissive:0x4fd1c5,emissiveIntensity:.14}),
+  rock:new THREE.MeshStandardMaterial({color:0x14161a,metalness:.2,roughness:.95,flatShading:true}),
+  floor:new THREE.MeshStandardMaterial({color:0x0b0e12,metalness:.92,roughness:.16}),
+  amberStrip:new THREE.MeshStandardMaterial({color:0x0a0a0a,emissive:0xff7a1a,emissiveIntensity:2.2}),
+  cyanStrip:new THREE.MeshStandardMaterial({color:0x0a0a0a,emissive:0x4fd1c5,emissiveIntensity:2.2}),
+};
+Object.values(MAT).forEach(m=>m.userData={shared:true});
+
+function box(w,h,d,mat,x,y,z,collide=true,ry=0){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  m.position.set(x,y,z); m.rotation.y=ry;
+  m.castShadow=Q.shadows; m.receiveShadow=true;
+  worldGroup.add(m);
+  if(collide)addCollider(m);
+  return m;
+}
+function floorPlane(size,mat,y=0,reflective=false){
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size),mat);
+  m.rotation.x=-Math.PI/2; m.position.y=y; m.receiveShadow=true;
+  m.userData.lidarDone=true; // 1-seg plane wireframe is just a diagonal — use a grid instead
+  worldGroup.add(m);
+  const wire=new THREE.Mesh(new THREE.PlaneGeometry(size,size,36,36),lidarMat);
+  wire.rotation.x=-Math.PI/2; wire.position.y=y+.07;
+  wire.userData.lidar=true; wire.userData.shared=true;
+  worldGroup.add(wire); sensorFX.add(wire);
+  if(reflective)reflectiveMeshes.push(m);
+  return m;
+}
+function objectiveBeacon(p,color=0xff7a1a){
+  const g=new THREE.Group(); g.position.copy(p);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(3,.12,10,42),
+    new THREE.MeshBasicMaterial({color,toneMapped:false}));
+  ring.rotation.x=Math.PI/2; g.add(ring);
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(.35,.7,60,12,1,true),
+    new THREE.MeshBasicMaterial({color,transparent:true,opacity:.12,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false,side:THREE.DoubleSide}));
+  beam.position.y=30; g.add(beam);
+  worldGroup.add(g); sensorFX.add(g);
+  g.userData.ring=ring;
+  return g;
+}
+/* searchlight tower: sweeping volumetric cone that feeds awareness */
+const searchlights=[];
+function searchTower(x,z,h=26,sweep=1.1,speed=.4,phase=0){
+  const pole=box(1.6,h,1.6,MAT.wall,x,h/2,z);
+  box(3,2,3,MAT.wallLit,x,h+1,z,false);
+  const head=new THREE.Group(); head.position.set(x,h+1,z); worldGroup.add(head);
+  const range=60, half=.16;
+  const cg=new THREE.ConeGeometry(Math.tan(half)*range,range,26,1,true);
+  cg.translate(0,-range/2,0); cg.rotateX(-Math.PI/2);
+  const cone=new THREE.Mesh(cg,new THREE.MeshBasicMaterial({color:0xfff2cf,transparent:true,opacity:.075,
+    blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,toneMapped:false}));
+  head.add(cone); sensorFX.add(cone);
+  const spot=new THREE.SpotLight(0xfff2cf,600,range,half*1.1,.5,1.4);
+  head.add(spot); head.add(spot.target); spot.target.position.set(0,0,10);
+  searchlights.push({head,range,half,sweep,speed,phase,tilt:.45}); // +X pitch aims local +Z beam downward
+  return pole;
+}
+function updateSearchlights(dt){
+  for(const s of searchlights){
+    const a=Math.sin(game.time*s.speed+s.phase)*s.sweep;
+    s.head.rotation.set(0,a,0);
+    s.head.rotateX(s.tilt);
+    // detection check
+    const origin=s.head.getWorldPosition(tmpV);
+    const dir=new THREE.Vector3(0,0,1).applyQuaternion(s.head.getWorldQuaternion(tmpQ));
+    const to=tmpV2.subVectors(player.pos,origin);
+    const dist=to.length();
+    if(dist<s.range){
+      to.divideScalar(dist);
+      if(dir.dot(to)>Math.cos(s.half*1.15)&&playerSignature()>.2){
+        awareness.value=Math.min(100,awareness.value+30*dt);
+        if(Math.random()<dt*2)flashMsg('SEARCHLIGHT — BREAK CONTACT');
+      }
+    }
+  }
+}
+/* laser tripwires */
+const tripwires=[];
+function tripwire(a,b,color=0xff2d3a){
+  const len=a.distanceTo(b);
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,len,8),
+    new THREE.MeshBasicMaterial({color,toneMapped:false}));
+  m.position.copy(a).add(b).multiplyScalar(.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),tmpV.subVectors(b,a).normalize());
+  worldGroup.add(m); sensorFX.add(m);
+  tripwires.push({a:a.clone(),b:b.clone(),m,cool:0});
+}
+function segDist(p,a,b){
+  const ab=tmpV.subVectors(b,a); const t=clamp(tmpV2.subVectors(p,a).dot(ab)/ab.lengthSq(),0,1);
+  return tmpV2.copy(a).addScaledVector(ab,t).distanceTo(p);
+}
+function updateTripwires(dt){
+  for(const t of tripwires){
+    t.cool-=dt;
+    t.m.material.color.setHex(Math.sin(game.time*8)>0?0xff2d3a:0x881018);
+    if(t.cool<=0&&segDist(player.pos,t.a,t.b)<player.radius+.3){
+      t.cool=3; awareness.noiseAt(player.pos,80,30);
+      awareness.value=Math.min(100,awareness.value+22);
+      burst(player.pos,C_RED,14,8,.4,1.8,6);
+      flashMsg('TRIPWIRE BREACH DETECTED'); AudioSys.alarm();
+    }
+  }
+}
+/* closing bulkhead doors (L4) */
+const doors=[];
+function bulkheadDoor(x,z,w,closeAt){
+  const m=box(w,26,2.4,MAT.wallLit,x,13+30,z); // starts raised (open)
+  const idx=colliders.findIndex(c=>c.mesh===m);
+  doors.push({m,closeAt,closed:false,idx,x,z,w});
+}
+function updateDoors(dt){
+  for(const d of doors){
+    if(d.closed)continue;
+    const t=game.level.timer;
+    const remain=d.closeAt-(game.level.timeLimit-t);
+    if(remain<6&&remain>5.9)flashMsg('BULKHEAD SEALING AHEAD');
+    if(remain<=0){
+      d.m.position.y=damp(d.m.position.y,13,4,dt);
+      if(d.m.position.y<13.3){ d.m.position.y=13; d.closed=true; AudioSys.noiseBurst(.4,.4,300); shake(.3); }
+      d.m.updateWorldMatrix(true,false);
+      colliders[d.idx].box.setFromObject(d.m);
+    }
+  }
+}
+
+/* ---------------- hack zones (L3 cores) ---------------- */
+const hackZones=[];
+function hackCore(p,label){
+  const g=new THREE.Group(); g.position.copy(p);
+  const casing=new THREE.Mesh(new THREE.OctahedronGeometry(2.2,0),
+    new THREE.MeshStandardMaterial({color:0x10151b,metalness:1,roughness:.2,emissive:0x4fd1c5,emissiveIntensity:1.4}));
+  g.add(casing);
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(3.4,.1,10,48),
+    new THREE.MeshBasicMaterial({color:0x4fd1c5,toneMapped:false,transparent:true,opacity:.8}));
+  g.add(halo); sensorFX.add(halo);
+  worldGroup.add(g);
+  hackZones.push({g,casing,halo,p:p.clone(),progress:0,done:false,label});
+  return hackZones[hackZones.length-1];
+}
+function updateHacks(dt){
+  for(const h of hackZones){
+    h.casing.rotation.y+=dt*.6; h.halo.rotation.x+=dt*.9;
+    if(h.done)continue;
+    const near=player.pos.distanceTo(h.p)<7&&!player.cloak;
+    if(near){
+      h.progress=Math.min(1,h.progress+dt/4.5);
+      h.halo.material.color.setHex(0xff7a1a);
+      h.halo.scale.setScalar(1+Math.sin(game.time*10)*.06);
+      if(Math.random()<.3)sparks.spawn(h.p,new THREE.Vector3(rand(-2,2),rand(1,4),rand(-2,2)),C_AMBER,.5,1.6,2);
+      flashMsg('EXTRACTING CORE — '+Math.round(h.progress*100)+'%',true);
+    }else{
+      h.progress=Math.max(0,h.progress-dt*.1);
+      h.halo.material.color.setHex(0x4fd1c5);
+    }
+    if(h.progress>=1){
+      h.done=true; h.casing.material.emissive.setHex(0xff7a1a); h.casing.material.emissiveIntensity=3;
+      h.halo.material.color.setHex(0xff7a1a);
+      spawnPulse(h.p,0xff7a1a,10,.5);
+      flashMsg(h.label+' SECURED'); AudioSys.ping(1600,.25);
+      awareness.noiseAt(h.p,60,20);
+    }
+  }
+}
+
+/* ---------------- destructible pylons (L1) ---------------- */
+const pylons=[];
+function relayPylon(x,z){
+  const g=new THREE.Group(); g.position.set(x,0,z);
+  const base=box(3,10,3,MAT.wall,x,5,z);
+  const core=new THREE.Mesh(new THREE.SphereGeometry(1.4,18,12),
+    new THREE.MeshStandardMaterial({color:0x0a0a0a,emissive:0xff2d3a,emissiveIntensity:2.6}));
+  core.position.set(x,12,z); worldGroup.add(core);
+  const ant=box(.3,7,.3,MAT.amberStrip,x,16,z,false);
+  pylons.push({core,ant,base,hp:70,dead:false,pos:new THREE.Vector3(x,12,z)});
+}
+function pylonHitCheck(point,dmg){
+  for(const p of pylons){
+    if(p.dead)continue;
+    if(point.distanceTo(p.pos)<2.4){
+      p.hp-=dmg;
+      burst(p.pos,C_RED,10,8,.4,1.8,6);
+      if(p.hp<=0){
+        p.dead=true;
+        burst(p.pos,C_AMBER,40,16,.9,2.6,8);
+        spawnPulse(p.pos,0xff2d3a,12,.5);
+        p.core.material.emissive.setHex(0x111111);
+        p.ant.material=MAT.wall;
+        AudioSys.noiseBurst(.6,.5,800);
+        flashMsg('RELAY PYLON DESTROYED');
+        awareness.noiseAt(p.pos,70,18);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+/* ---------------- blacksite structure kit ----------------
+   Reusable top-secret base pieces. Anything that spins registers
+   itself in spinProps (cleared per level, updated in the main loop). */
+const spinProps=[];
+function landingPad(x,z,r=12){
+  const pad=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1.4,28),MAT.floor);
+  pad.position.set(x,.7,z); pad.receiveShadow=true; worldGroup.add(pad); addCollider(pad);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(r*.86,.22,8,40),MAT.amberStrip);
+  ring.rotation.x=Math.PI/2; ring.position.set(x,1.5,z); worldGroup.add(ring);
+  const h=new THREE.Mesh(new THREE.TorusGeometry(r*.3,.16,8,26),MAT.cyanStrip);
+  h.rotation.x=Math.PI/2; h.position.set(x,1.52,z); worldGroup.add(h);
+  return pad;
+}
+function commDome(x,z,r=10){
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(r,22,14,0,TWO_PI,0,Math.PI/2),MAT.wall);
+  dome.position.set(x,0,z); dome.castShadow=Q.shadows; worldGroup.add(dome); addCollider(dome);
+  box(r*.24,r*1.7,r*.24,MAT.wall,x,r*1.7*.5,z,false);
+  const bcn=box(r*.3,.5,r*.3,MAT.amberStrip,x,r*1.75,z,false);
+  spinProps.push({m:bcn,ax:'y',sp:2.4});
+  return dome;
+}
+function radarDish(x,z){
+  box(2.4,9,2.4,MAT.wall,x,4.5,z);
+  const pivot=new THREE.Group(); pivot.position.set(x,10,z); worldGroup.add(pivot);
+  const dish=new THREE.Mesh(new THREE.SphereGeometry(5.5,20,10,0,TWO_PI,0,Math.PI/3.2),
+    new THREE.MeshStandardMaterial({color:0x1a2026,metalness:.9,roughness:.4,side:THREE.DoubleSide}));
+  dish.rotation.x=Math.PI/2.4; dish.position.z=1.4; pivot.add(dish);
+  const feed=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,4.2,8),MAT.cyanStrip);
+  feed.rotation.x=Math.PI/2.4; feed.position.z=3.2; feed.position.y=1.4; pivot.add(feed);
+  spinProps.push({m:pivot,ax:'y',sp:.5});
+  return pivot;
+}
+function antennaMast(x,z,h=30){
+  box(1.2,h,1.2,MAT.wall,x,h/2,z);
+  box(.4,6,.4,MAT.amberStrip,x,h+3,z,false);
+  box(5,.4,.4,MAT.cyanStrip,x,h*.8,z,false);
+}
+function cargoStack(x,z,n=3){
+  for(let i=0;i<n;i++)
+    box(rand(4,6),3,rand(4,6),i%2?MAT.wall:MAT.wallLit,x+rand(-2,2),1.5+i*3,z+rand(-2,2));
+}
+/* the hangar itself — south face carries an open bay the Sentinel flies INTO.
+   doorW/doorH define the aperture; walls, lintel, roof and columns all collide. */
+function blacksiteHangar(cx,cz,W=120,D=100,H=30,doorW=30,doorH=16){
+  const zS=cz+D/2, zN=cz-D/2;
+  const segW=(W-doorW)/2;
+  // south face: two shoulders + lintel over the bay
+  box(segW,H,4,MAT.wall,cx-(doorW/2+segW/2),H/2,zS);
+  box(segW,H,4,MAT.wall,cx+(doorW/2+segW/2),H/2,zS);
+  box(doorW,H-doorH,4,MAT.wall,cx,doorH+(H-doorH)/2,zS);
+  // bay frame glow — reads as "fly in HERE"
+  box(doorW+2,1,4.6,MAT.amberStrip,cx,doorH+.6,zS,false);
+  box(1,doorH,4.6,MAT.amberStrip,cx-doorW/2-.6,doorH/2,zS,false);
+  box(1,doorH,4.6,MAT.amberStrip,cx+doorW/2+.6,doorH/2,zS,false);
+  // shell
+  box(W,H,4,MAT.wall,cx,H/2,zN);                 // north
+  box(4,H,D,MAT.wall,cx-W/2,H/2,cz);             // west
+  box(4,H,D,MAT.wall,cx+W/2,H/2,cz);             // east
+  box(W+8,4,D+8,MAT.wall,cx,H+2,cz);             // roof
+  box(6,3,6,MAT.amberStrip,cx-W/2+8,H+5.5,cz-D/2+8,false); // roof beacons
+  box(6,3,6,MAT.cyanStrip,cx+W/2-8,H+5.5,cz+D/2-8,false);
+  // interior columns + strip lighting
+  for(const px of [-W*.28,W*.28])for(const pz of [-D*.25,D*.25]){
+    box(4,H,4,MAT.wall,cx+px,H/2,cz+pz);
+    box(4.4,1.2,4.4,MAT.cyanStrip,cx+px,H*.35,cz+pz,false);
+  }
+  for(let z=zN+14;z<zS-10;z+=16)
+    box(W*.7,.5,1.2,((z-zN)%32<16)?MAT.cyanStrip:MAT.amberStrip,cx,H-1.4,z,false);
+  // approach guide-lights on the tarmac leading into the bay
+  for(let z=zS+8;z<zS+70;z+=12){
+    box(1.4,.4,3,MAT.amberStrip,cx-doorW*.32,.3,z,false);
+    box(1.4,.4,3,MAT.amberStrip,cx+doorW*.32,.3,z,false);
+  }
+}
+
+/* ---------------- levels ---------------- */
+function makeLights(hemiC=0x1a2b33,hemiG=0x05070a,hemiI=.7){
+  const hemi=new THREE.HemisphereLight(hemiC,hemiG,hemiI); worldGroup.add(hemi);
+  const key=new THREE.DirectionalLight(0x8ab8c9,.5);
+  key.position.set(40,80,20);
+  if(Q.shadows){ key.castShadow=true; key.shadow.mapSize.set(2048,2048);
+    key.shadow.bias=-.0004; key.shadow.normalBias=.35; // acne guard — banding source in shadowed modes
+    const sc=key.shadow.camera; sc.left=-120;sc.right=120;sc.top=120;sc.bottom=-120;sc.far=300; }
+  worldGroup.add(key);
+  return key;
+}
+
+const LEVELS=[
+{ // ============ L1 PERIMETER BREACH ============
+  name:'PERIMETER BREACH', num:'01',
+  brief:`SITE NADIR — SURFACE APPROACH · 0230 LOCAL\n\nStorm cell overhead. Their thermals are blind; their optics are not.\nBeyond the wall sits a blacksite hangar that does not exist on any\nmap — and beneath it, the shaft down to the gravity-well reactor.\n\nTwo relay pylons feed the perimeter grid its eyes. Cut them, and the\nouter gate vents open for ninety seconds of confusion.\n\nStay low. Stay dark. The searchlights do not forgive. And Sentinel —\nthe grid has new teeth: MRV-class "MANTA" interceptors. They are\nbigger than you. Do not let them prove it.`,
+  objectives:[
+    {id:'p1',label:'Destroy relay pylon ALPHA'},
+    {id:'p2',label:'Destroy relay pylon BRAVO'},
+    {id:'exit',label:'Breach the perimeter gate'},
+  ],
+  build(){
+    scene.background=new THREE.Color(0x04070c);
+    scene.fog=new THREE.FogExp2(0x04070c,.011);
+    makeLights(0x22384a,0x04060a,.85);
+    this.bounds=new THREE.Box3(new THREE.Vector3(-160,1,-160),new THREE.Vector3(160,70,160));
+    this.floorY=0; this.killY=-20;
+    floorPlane(400,MAT.floor,0,true);
+    // canyon rock field
+    const rockGeo=new THREE.DodecahedronGeometry(1,0); rockGeo.userData={shared:true};
+    const inst=new THREE.InstancedMesh(rockGeo,MAT.rock,90);
+    inst.castShadow=Q.shadows; inst.receiveShadow=true;
+    const M=new THREE.Matrix4(), q=new THREE.Quaternion(), sc=new THREE.Vector3();
+    let placed=0;
+    while(placed<90){
+      const x=rand(-150,150), z=rand(-150,150);
+      if(Math.hypot(x,z)<24||Math.abs(x)<14&&z<-40)continue; // keep spawn + gate lane clear
+      const s=rand(4,14);
+      q.setFromEuler(new THREE.Euler(rand(0,3),rand(0,3),rand(0,3)));
+      M.compose(new THREE.Vector3(x,s*.4,z),q,sc.set(s,s*rand(.8,1.8),s));
+      inst.setMatrixAt(placed,M);
+      const bb=new THREE.Box3(new THREE.Vector3(x-s*.8,0,z-s*.8),new THREE.Vector3(x+s*.8,s*1.6,z+s*.8));
+      colliders.push({box:bb});
+      placed++;
+    }
+    worldGroup.add(inst); losMeshes.push(inst);
+    // perimeter wall + gate at far north
+    box(140,22,4,MAT.wall,-46,11,-150); box(140,22,4,MAT.wall,46,11,-150);
+    box(10,4,4,MAT.wallLit,0,20,-150,true);
+    box(24,1.2,4,MAT.amberStrip,0,22.6,-150,false);
+    // the blacksite, glimpsed beyond the gate — unreachable this mission
+    box(96,26,60,MAT.wall,0,13,-215,false);
+    box(30,10,4,MAT.wall,0,5,-184,false);
+    box(32,1,4.6,MAT.amberStrip,0,10.6,-184,false); // sealed bay glow
+    antennaMast(-60,-200,34); antennaMast(58,-206,28);
+    const dome1=new THREE.Mesh(new THREE.SphereGeometry(12,20,12,0,TWO_PI,0,Math.PI/2),MAT.wall);
+    dome1.position.set(84,0,-198); worldGroup.add(dome1);
+    box(3,.6,3,MAT.cyanStrip,84,12.6,-198,false);
+    // forward bunkers inside the perimeter field
+    box(14,6,10,MAT.wall,-96,3,20); box(15,1,11,MAT.cyanStrip,-96,6.6,20,false);
+    box(12,5,9,MAT.wall,104,2.5,-16); box(13,1,10,MAT.amberStrip,104,5.6,-16,false);
+    cargoStack(-88,34,2); cargoStack(96,-2,3);
+    // searchlight towers
+    searchTower(-42,-70,26,1.2,.42,0);
+    searchTower(46,-96,30,1.0,.35,2.1);
+    // relay pylons
+    relayPylon(-58,-30); relayPylon(64,-58);
+    // rain
+    rain=new ParticlePool(Math.floor(2600*Q.particles));
+    for(let i=0;i<rain.count;i++)
+      rain.spawn(new THREE.Vector3(rand(-160,160),rand(2,80),rand(-160,160)),
+        new THREE.Vector3(-2,-42,0),new THREE.Color(0x4aa8b8),9999,1.0,0);
+    this.exitBeacon=objectiveBeacon(new THREE.Vector3(0,2,-146),0xff7a1a);
+    this.playerStart=new THREE.Vector3(0,8,140);
+    this.spawnOrbs=[
+      ['WATCHER',new THREE.Vector3(-40,12,40),[new THREE.Vector3(-40,12,40),new THREE.Vector3(-80,10,-10),new THREE.Vector3(-30,14,-50)]],
+      ['WATCHER',new THREE.Vector3(50,10,20),[new THREE.Vector3(50,10,20),new THREE.Vector3(90,12,-40),new THREE.Vector3(40,10,-80)]],
+      ['WATCHER',new THREE.Vector3(0,16,-20),[new THREE.Vector3(0,16,-20),new THREE.Vector3(-50,14,-90),new THREE.Vector3(50,14,-90)]],
+      ['WATCHER',new THREE.Vector3(-90,10,-110),[new THREE.Vector3(-90,10,-110),new THREE.Vector3(-20,12,-120)]],
+      ['HUNTER',new THREE.Vector3(80,14,-120),[new THREE.Vector3(80,14,-120),new THREE.Vector3(-60,16,-130)]],
+    ];
+  },
+  check(){
+    const o=this.objectives;
+    if(pylons[0]&&pylons[0].dead)markDone('p1');
+    if(pylons[1]&&pylons[1].dead)markDone('p2');
+    if(isDone('p1')&&isDone('p2')){
+      this.exitBeacon.visible=true;
+      if(player.pos.distanceTo(new THREE.Vector3(0,8,-146))<9)markDone('exit');
+    }else this.exitBeacon.visible=false;
+  }
+},
+{ // ============ L2 BLACKSITE HANGAR ============
+  name:'BLACKSITE HANGAR', num:'02',
+  brief:`FACILITY NADIR-H — RESTRICTED AIRSPACE · 0300 LOCAL\n\nThe hangar in front of you does not exist. No records, no manifest,\nno one who has seen inside it and talked about it afterwards.\n\nThe bay doors are open for MANTA rotation cycles. Thread the bay,\nget inside, and rip the hangar mainframe — it holds the location of\nthe ventilation shaft that drops to the reactor. A shielded Warden\nsits on the mainframe. The intake it unlocks is in the northeast\ncorner of the floor.\n\nYou will be indoors, Sentinel. There is nowhere to run in a box.`,
+  objectives:[
+    {id:'infil',label:'Infiltrate the hangar through the bay doors'},
+    {id:'core',label:'Extract the hangar mainframe'},
+    {id:'exit',label:'Dock at the ventilation shaft intake'},
+  ],
+  build(){
+    scene.background=new THREE.Color(0x040609);
+    scene.fog=new THREE.FogExp2(0x040609,.0095);
+    makeLights(0x203442,0x04060a,.8);
+    this.bounds=new THREE.Box3(new THREE.Vector3(-170,1,-170),new THREE.Vector3(170,58,170));
+    this.floorY=0; this.killY=-20;
+    floorPlane(400,MAT.floor,0,true);
+    // ============ the top-secret base ============
+    blacksiteHangar(0,-60,120,100,30,30,16); // fly-in bay faces the spawn
+    // hangar interior — parked MRV silhouettes, cargo, gantry
+    box(16,4,20,MAT.wall,-34,2,-84); box(17,.8,21,MAT.cyanStrip,-34,4.5,-84,false);
+    box(16,4,20,MAT.wall,34,2,-84);  box(17,.8,21,MAT.amberStrip,34,4.5,-84,false);
+    cargoStack(-40,-34,3); cargoStack(42,-40,2); cargoStack(-16,-96,2);
+    box(70,2,3,MAT.wall,0,22,-60); // overhead gantry beam
+    // hangar mainframe + its Warden
+    hackCore(new THREE.Vector3(0,6,-92),'HANGAR MAINFRAME');
+    // ventilation shaft intake — NE corner of the hangar floor
+    const intake=new THREE.Mesh(new THREE.CylinderGeometry(5,5,.6,26),
+      new THREE.MeshStandardMaterial({color:0x05070a,metalness:.9,roughness:.3,emissive:0x0d1f22,emissiveIntensity:.6}));
+    intake.position.set(44,.35,-96); worldGroup.add(intake);
+    const iRing=new THREE.Mesh(new THREE.TorusGeometry(5.4,.22,8,36),MAT.cyanStrip);
+    iRing.rotation.x=Math.PI/2; iRing.position.set(44,.8,-96); worldGroup.add(iRing);
+    // ============ exterior compound ============
+    landingPad(-92,44,13); landingPad(94,38,13);
+    commDome(114,-46,10); radarDish(-116,-52);
+    antennaMast(-70,-118,32); antennaMast(74,-122,26);
+    box(14,6,10,MAT.wall,-100,3,-10); box(15,1,11,MAT.cyanStrip,-100,6.6,-10,false);
+    cargoStack(-70,60,2); cargoStack(80,70,3); cargoStack(112,10,2);
+    // compound fence with a south gap on the approach lane
+    box(120,8,3,MAT.wall,-88,4,110); box(120,8,3,MAT.wall,88,4,110);
+    box(58,1,3.4,MAT.amberStrip,-88,8.6,110,false); box(58,1,3.4,MAT.amberStrip,88,8.6,110,false);
+    // guard towers flanking the bay
+    searchTower(-52,6,28,1.1,.4,0);
+    searchTower(54,2,28,1.1,.38,2.4);
+    this.exitBeacon=objectiveBeacon(new THREE.Vector3(44,2,-96),0x4fd1c5);
+    this.playerStart=new THREE.Vector3(0,9,146);
+    this.spawnOrbs=[
+      ['WATCHER',new THREE.Vector3(-80,12,60),[new THREE.Vector3(-80,12,60),new THREE.Vector3(-110,14,-30),new THREE.Vector3(-40,12,-120)]],
+      ['WATCHER',new THREE.Vector3(84,12,50),[new THREE.Vector3(84,12,50),new THREE.Vector3(110,14,-40),new THREE.Vector3(40,12,-118)]],
+      ['WATCHER',new THREE.Vector3(0,14,40),[new THREE.Vector3(0,14,40),new THREE.Vector3(-60,16,20),new THREE.Vector3(60,16,20)]],
+      ['HUNTER',new THREE.Vector3(0,18,-130),[new THREE.Vector3(0,18,-130),new THREE.Vector3(-90,16,90)]],
+      ['WATCHER',new THREE.Vector3(-30,12,-40),[new THREE.Vector3(-30,12,-40),new THREE.Vector3(30,10,-40),new THREE.Vector3(30,12,-90),new THREE.Vector3(-30,10,-90)]],
+      ['HUNTER',new THREE.Vector3(20,16,-60)],
+      ['WARDEN',new THREE.Vector3(0,8,-84)],
+    ];
+  },
+  check(){
+    if(Math.abs(player.pos.x)<56&&player.pos.z>-106&&player.pos.z<-14&&player.pos.y<28)markDone('infil');
+    if(hackZones[0]&&hackZones[0].done)markDone('core');
+    this.exitBeacon.visible=isDone('core');
+    if(isDone('infil')&&isDone('core')&&player.pos.distanceTo(new THREE.Vector3(44,4,-96))<8)markDone('exit');
+  }
+},
+{ // ============ L3 THE SHAFT ============
+  name:'THE SHAFT', num:'03',
+  brief:`VENTILATION SHAFT NADIR-V · DEPTH 240 METERS\n\nThe intake you uncorked in the hangar drops two hundred and forty\nmeters, straight down — a maintenance shaft laced with\nsecurity grates and laser tripwires. The grates leave gaps a\nconventional airframe could never thread.\n\nYou are not a conventional airframe. Kill the anti-grav and fall.\nA Warden holds the airlock at the bottom. It does not move. It does\nnot sleep.`,
+  objectives:[
+    {id:'desc',label:'Descend to the airlock (-220m)'},
+    {id:'warden',label:'Neutralize the airlock Warden'},
+    {id:'exit',label:'Dock at the airlock'},
+  ],
+  build(){
+    scene.background=new THREE.Color(0x030405);
+    scene.fog=new THREE.FogExp2(0x030405,.008);
+    makeLights(0x1a2b33,0x04060a,.55);
+    const R=34;
+    this.cylinderBound=R; this.floorY=-230; this.killY=-260;
+    this.bounds=new THREE.Box3(new THREE.Vector3(-R,-235,-R),new THREE.Vector3(R,30,R));
+    // shaft wall (visual cylinder, open ended)
+    const wall=new THREE.Mesh(new THREE.CylinderGeometry(R+1,R+1,280,36,1,true),
+      new THREE.MeshStandardMaterial({color:0x11151a,metalness:.9,roughness:.5,side:THREE.BackSide}));
+    wall.position.y=-100; worldGroup.add(wall);
+    floorPlane(90,MAT.floor,-230,true);
+    // glow rings down the shaft
+    for(let y=10;y>-230;y-=24){
+      const r=new THREE.Mesh(new THREE.TorusGeometry(R,.3,8,48),
+        (y/24|0)%2?MAT.cyanStrip:MAT.amberStrip);
+      r.rotation.x=Math.PI/2; r.position.y=y; worldGroup.add(r);
+    }
+    // blocking grates with one gap each
+    const gapAngles=[.4,2.2,4.1,1.1,3.3,5.2,.9,2.9];
+    for(let i=0;i<8;i++){
+      const y=-20-i*26;
+      const gapA=gapAngles[i], gapW=1.1;
+      for(let a=0;a<TWO_PI;a+=.52){
+        let da=Math.abs(((a-gapA)%TWO_PI+TWO_PI)%TWO_PI); if(da>Math.PI)da=TWO_PI-da;
+        if(da<gapW)continue;
+        const x=Math.cos(a)*R*.55, z=Math.sin(a)*R*.55;
+        box(16,2.2,9,MAT.wall,x,y,z,true,-a);
+      }
+      // mark the gap
+      const gx=Math.cos(gapA)*R*.55, gz=Math.sin(gapA)*R*.55;
+      const mk=box(3,.6,3,MAT.cyanStrip,gx,y-2.5,gz,false);
+      mk.material=MAT.cyanStrip;
+      // tripwire across a random chord below some grates
+      if(i%2===1){
+        const a1=rand(0,TWO_PI);
+        tripwire(new THREE.Vector3(Math.cos(a1)*R*.9,y-12,Math.sin(a1)*R*.9),
+                 new THREE.Vector3(-Math.cos(a1)*R*.9,y-12,-Math.sin(a1)*R*.9));
+      }
+    }
+    this.exitBeacon=objectiveBeacon(new THREE.Vector3(0,-228,0),0x4fd1c5);
+    this.playerStart=new THREE.Vector3(0,18,0);
+    this.spawnOrbs=[
+      ['WATCHER',new THREE.Vector3(14,-40,0),[new THREE.Vector3(14,-40,0),new THREE.Vector3(-14,-44,8),new THREE.Vector3(0,-38,-16)]],
+      ['WATCHER',new THREE.Vector3(-10,-96,10),[new THREE.Vector3(-10,-96,10),new THREE.Vector3(12,-100,-8)]],
+      ['WATCHER',new THREE.Vector3(8,-150,-12),[new THREE.Vector3(8,-150,-12),new THREE.Vector3(-12,-154,10)]],
+      ['HUNTER',new THREE.Vector3(0,-120,0)],
+      ['HUNTER',new THREE.Vector3(0,-190,14)],
+      ['WARDEN',new THREE.Vector3(0,-222,0)],
+    ];
+  },
+  check(){
+    if(player.pos.y<-215)markDone('desc');
+    const w=orbs.find(o=>o.type==='WARDEN');
+    if(w&&w.dead)markDone('warden');
+    if(isDone('desc')&&isDone('warden')&&player.pos.distanceTo(new THREE.Vector3(0,-226,0))<8)markDone('exit');
+  }
+},
+{ // ============ L4 REACTOR GALLERY ============
+  name:'REACTOR GALLERY', num:'04',
+  brief:`GRAVITY-WELL REACTOR HALL · DEPTH 240M\n\nThree data cores hold the reactor governors' keys. Each core is\nwatched by a shielded Warden — EMP the shield, then hold position\ninside the extraction halo until the transfer completes.\n\nA Hive nests in the gallery's heart. Wake the grid, and it will\nnot stop making Hunters until you burn it out.`,
+  objectives:[
+    {id:'c1',label:'Extract data core K-1'},
+    {id:'c2',label:'Extract data core K-2'},
+    {id:'c3',label:'Extract data core K-3'},
+    {id:'exit',label:'Reach the exfil junction'},
+  ],
+  build(){
+    scene.background=new THREE.Color(0x050408);
+    scene.fog=new THREE.FogExp2(0x050408,.0085);
+    makeLights(0x2b2440,0x05040a,.7);
+    this.bounds=new THREE.Box3(new THREE.Vector3(-120,1.2,-120),new THREE.Vector3(120,44,120));
+    this.floorY=0; this.killY=-10;
+    floorPlane(260,MAT.floor,0,true);
+    // ceiling glow grid
+    const ceil=floorPlane(260,MAT.wall,46); ceil.rotation.x=Math.PI/2;
+    // column grid
+    for(let gx=-100;gx<=100;gx+=40)for(let gz=-100;gz<=100;gz+=40){
+      if(Math.abs(gx)<30&&Math.abs(gz)<30)continue;
+      box(6,46,6,MAT.wall,gx,23,gz);
+      box(6.4,1.4,6.4,MAT.cyanStrip,gx,10,gz,false);
+      box(6.4,1.4,6.4,MAT.amberStrip,gx,32,gz,false);
+    }
+    // reactor centerpiece
+    const core=new THREE.Mesh(new THREE.SphereGeometry(9,26,18),
+      new THREE.MeshStandardMaterial({color:0x0a0a12,metalness:1,roughness:.2,emissive:0xb26bff,emissiveIntensity:1.1}));
+    core.position.set(0,16,0); worldGroup.add(core);
+    addCollider(core,1);
+    const cage=new THREE.Mesh(new THREE.TorusKnotGeometry(13,.5,120,10,2,3),
+      new THREE.MeshStandardMaterial({color:0x161a20,metalness:1,roughness:.3}));
+    cage.position.copy(core.position); worldGroup.add(cage);
+    this.cage=cage;
+    // data cores + guarding wardens
+    const spots=[new THREE.Vector3(-88,8,-88),new THREE.Vector3(92,8,-30),new THREE.Vector3(-40,8,96)];
+    hackCore(spots[0],'CORE K-1'); hackCore(spots[1],'CORE K-2'); hackCore(spots[2],'CORE K-3');
+    this.exitBeacon=objectiveBeacon(new THREE.Vector3(100,2,100),0xff7a1a);
+    this.playerStart=new THREE.Vector3(-100,10,100);
+    this.spawnOrbs=[
+      ['WARDEN',spots[0].clone().add(new THREE.Vector3(6,4,0))],
+      ['WARDEN',spots[1].clone().add(new THREE.Vector3(-6,4,0))],
+      ['WARDEN',spots[2].clone().add(new THREE.Vector3(0,4,-6))],
+      ['WATCHER',new THREE.Vector3(-60,14,0),[new THREE.Vector3(-60,14,0),new THREE.Vector3(0,16,-60),new THREE.Vector3(60,14,0),new THREE.Vector3(0,16,60)]],
+      ['WATCHER',new THREE.Vector3(0,26,-90),[new THREE.Vector3(0,26,-90),new THREE.Vector3(-90,24,0),new THREE.Vector3(0,26,90),new THREE.Vector3(90,24,0)]],
+      ['HUNTER',new THREE.Vector3(40,20,40)],
+      ['HUNTER',new THREE.Vector3(-40,20,-40)],
+      ['HIVE',new THREE.Vector3(0,34,0)],
+    ];
+  },
+  check(){
+    if(hackZones[0]&&hackZones[0].done)markDone('c1');
+    if(hackZones[1]&&hackZones[1].done)markDone('c2');
+    if(hackZones[2]&&hackZones[2].done)markDone('c3');
+    if(this.cage)this.cage.rotation.y+=.0018;
+    const all=isDone('c1')&&isDone('c2')&&isDone('c3');
+    this.exitBeacon.visible=all;
+    if(all&&player.pos.distanceTo(new THREE.Vector3(100,8,100))<9)markDone('exit');
+  }
+},
+{ // ============ L5 EXFILTRATION ============
+  name:'EXFILTRATION', num:'05',
+  brief:`BLACKOUT PROTOCOL — TERMINAL PHASE · T-MINUS 180 SECONDS\n\nThe governors are burning out. Site NADIR is sealing itself: every\nbulkhead on the egress corridor is timed to slam shut, and the grid\nhas gone to permanent LOCKDOWN. Every ORB knows where you are.\n\nThere is no stealth left. There is only speed. SURGE, Sentinel —\nand do not be inside when the mountain closes.`,
+  objectives:[
+    {id:'exit',label:'Reach the surface breach before T-0'},
+  ],
+  timeLimit:180, forceLockdown:true,
+  build(){
+    scene.background=new THREE.Color(0x0a0508);
+    scene.fog=new THREE.FogExp2(0x0a0508,.009);
+    makeLights(0x40222a,0x0a0508,.8);
+    this.bounds=new THREE.Box3(new THREE.Vector3(-26,1.2,-620),new THREE.Vector3(26,40,20));
+    this.floorY=0; this.killY=-10;
+    // long corridor
+    const L=640;
+    const fl=new THREE.Mesh(new THREE.PlaneGeometry(52,L),MAT.floor);
+    fl.rotation.x=-Math.PI/2; fl.position.z=-L/2+20; fl.receiveShadow=true;
+    fl.userData.lidarDone=true;
+    worldGroup.add(fl); reflectiveMeshes.push(fl);
+    const flWire=new THREE.Mesh(new THREE.PlaneGeometry(52,L,8,96),lidarMat);
+    flWire.rotation.x=-Math.PI/2; flWire.position.set(0,.07,-L/2+20);
+    flWire.userData.lidar=true; flWire.userData.shared=true;
+    worldGroup.add(flWire); sensorFX.add(flWire);
+    for(const side of [-1,1]){
+      const w=new THREE.Mesh(new THREE.BoxGeometry(4,42,L),MAT.wall);
+      w.position.set(side*28,21,-L/2+20); worldGroup.add(w); addCollider(w);
+      for(let z=0;z>-600;z-=30){
+        box(4.4,1.2,10,z%60===0?MAT.amberStrip:MAT.cyanStrip,side*27.6,8,z,false);
+      }
+    }
+    const ceil=new THREE.Mesh(new THREE.BoxGeometry(56,4,L),MAT.wall);
+    ceil.position.set(0,42,-L/2+20); worldGroup.add(ceil); addCollider(ceil);
+    // obstacles + bulkheads
+    for(let i=0;i<7;i++){
+      const z=-70-i*75;
+      box(rand(14,22),rand(10,20),6,MAT.wall,rand(-12,12),rand(6,14),z+30);
+      bulkheadDoor(0,z,52, 22+i*21); // seconds after start when each seals
+    }
+    this.exitBeacon=objectiveBeacon(new THREE.Vector3(0,2,-596),0x4fd1c5);
+    this.playerStart=new THREE.Vector3(0,8,10);
+    this.spawnOrbs=[
+      ['HUNTER',new THREE.Vector3(0,12,-90)],
+      ['HUNTER',new THREE.Vector3(-10,10,-200)],
+      ['HUNTER',new THREE.Vector3(10,14,-300)],
+      ['HIVE',new THREE.Vector3(0,20,-380)],
+      ['HUNTER',new THREE.Vector3(0,10,-470)],
+      ['WARDEN',new THREE.Vector3(0,10,-560)],
+    ];
+    this.timer=this.timeLimit;
+    $('missionTimer').style.display='block';
+  },
+  check(dt){
+    this.timer-=dt;
+    const t=Math.max(0,this.timer);
+    $('missionTimer').textContent='T-'+String(Math.floor(t/60)).padStart(2,'0')+':'+String(Math.floor(t%60)).padStart(2,'0');
+    if(this.timer<=0){killPlayer('PROTOCOL COMPLETE — ENTOMBED');return;}
+    updateDoors(dt);
+    if(player.pos.z<-590)markDone('exit');
+  }
+}];
+
+/* ---------------- objectives helpers ---------------- */
+function markDone(id){
+  const o=game.level.objectives.find(o=>o.id===id);
+  if(o&&!o.done){ o.done=true; renderObjectives(); AudioSys.ping(1400,.22);
+    if(id!=='exit')flashMsg('DIRECTIVE COMPLETE'); }
+}
+function isDone(id){ const o=game.level.objectives.find(o=>o.id===id); return o&&o.done; }
+function renderObjectives(){
+  const el=$('objList'); el.innerHTML='';
+  for(const o of game.level.objectives){
+    const d=document.createElement('div'); d.textContent=o.label;
+    if(o.done)d.classList.add('done'); el.appendChild(d);
+  }
+}
+
+/* ---------------- HUD ---------------- */
+let msgTimer=null;
+function flashMsg(t,quick){
+  const m=$('msg'); m.textContent=t; m.style.opacity=1;
+  clearTimeout(msgTimer); msgTimer=setTimeout(()=>m.style.opacity=0,quick?350:1600);
+}
+const radarCtx=$('radar').getContext('2d');
+function drawRadar(){
+  const c=radarCtx,S=170,h=S/2,R=120;
+  c.clearRect(0,0,S,S);
+  c.strokeStyle='rgba(79,209,197,.35)'; c.lineWidth=1;
+  c.beginPath();c.arc(h,h,h-2,0,TWO_PI);c.stroke();
+  c.beginPath();c.arc(h,h,(h-2)*.5,0,TWO_PI);c.stroke();
+  c.strokeStyle='rgba(79,209,197,.15)';
+  c.beginPath();c.moveTo(h,4);c.lineTo(h,S-4);c.moveTo(4,h);c.lineTo(S-4,h);c.stroke();
+  // sweep
+  const sa=(game.time*1.4)%TWO_PI;
+  const grad=c.createLinearGradient(h,h,h+Math.cos(sa)*h,h+Math.sin(sa)*h);
+  grad.addColorStop(0,'rgba(79,209,197,0)');grad.addColorStop(1,'rgba(79,209,197,.5)');
+  c.strokeStyle=grad;c.lineWidth=2;
+  c.beginPath();c.moveTo(h,h);c.lineTo(h+Math.cos(sa)*(h-3),h+Math.sin(sa)*(h-3));c.stroke();
+  const cos=Math.cos(player.yaw),sin=Math.sin(player.yaw);
+  const plot=(wp,color,size,shape)=>{
+    const dx=wp.x-player.pos.x, dz=wp.z-player.pos.z;
+    // player frame: forward f=(-sin,-cos), right r=(cos,-sin)
+    const up=-dx*sin-dz*cos, rt=dx*cos-dz*sin;
+    const px=h+rt/R*(h-4), py=h-up/R*(h-4);
+    if(Math.hypot(px-h,py-h)>h-4)return;
+    c.fillStyle=color;
+    if(shape==='d'){ c.save();c.translate(px,py);c.rotate(Math.PI/4);c.fillRect(-size,-size,size*2,size*2);c.restore(); }
+    else{ c.beginPath();c.arc(px,py,size,0,TWO_PI);c.fill(); }
+  };
+  for(const o of orbs){
+    if(o.dead)continue;
+    let col='#4fd1c5';
+    if(o.disabledT>0)col='#33444a';
+    else if(o.state==='HUNT')col='#ff2d3a';
+    else if(o.state==='SCAN')col='#ff7a1a';
+    else col='#'+new THREE.Color(o.T.tint).getHexString();
+    plot(o.pos,col,2.6);
+  }
+  for(const hz of hackZones)if(!hz.done)plot(hz.p,'#ff7a1a',3.4,'d');
+  for(const p of pylons)if(!p.dead)plot(p.pos,'#ff2d3a',3.2,'d');
+  if(game.level&&game.level.exitBeacon&&game.level.exitBeacon.visible)
+    plot(game.level.exitBeacon.position,'#ffffff',3.6,'d');
+  // player
+  c.fillStyle='#ff7a1a';
+  c.beginPath();c.moveTo(h,h-5);c.lineTo(h-4,h+4);c.lineTo(h+4,h+4);c.closePath();c.fill();
+}
+let rngStr='——.—', rngT=0;
+function updateHUD(){
+  if(MOBILE.active){
+    $('tClk').classList.toggle('lit',player.cloak);
+    $('tSrg').classList.toggle('lit',surgeLatch);
+  }
+  $('bShield').firstElementChild.style.width=(player.shield/player.shieldMax*100)+'%';
+  $('bHull').firstElementChild.style.width=(player.hull/player.hullMax*100)+'%';
+  $('bEnergy').firstElementChild.style.width=(player.energy/player.energyMax*100)+'%';
+  $('bHeat').firstElementChild.style.width=player.heat+'%';
+  $('tShield').textContent=Math.round(player.shield);
+  $('tHull').textContent=Math.round(player.hull);
+  $('tEnergy').textContent=Math.round(player.energy);
+  $('tHeat').textContent=Math.round(player.heat);
+  const mode=$('modeTag');
+  let m='GLIDE',cls='';
+  if(player.cloak){m='CLOAKED';cls='cloak';}
+  else if(player.nullDrop){m='NULL-DROP';cls='drop';}
+  else if(player.surge){m='SURGE';cls='surge';}
+  else if(player.vel.length()<1.5)m='HOVER';
+  mode.textContent=m; mode.className=cls;
+  $('telem').textContent='VEL '+player.vel.length().toFixed(1).padStart(4,'0')
+    +' · ALT '+Math.max(0,player.pos.y-(game.level?.floorY??0)).toFixed(1).padStart(5,'0')
+    +' · GRID '+Math.round(player.pos.x)+','+Math.round(player.pos.z);
+  // scope telemetry — range to whatever sits under the reticle
+  if(game.time-rngT>.12){
+    rngT=game.time;
+    raycaster.setFromCamera({x:0,y:0},camera); raycaster.far=500;
+    let d=null;
+    const hits=raycaster.intersectObjects(losMeshes,false);
+    if(hits.length)d=hits[0].distance;
+    for(const o of orbs){
+      if(o.dead)continue;
+      const t=raySphere(camera.position,raycaster.ray.direction,o.pos,o.hitR);
+      if(t!==null&&(d===null||t<d))d=t;
+    }
+    rngStr=d===null?'——.—':d.toFixed(1).padStart(5,'0');
+  }
+  const hdg=((-player.yaw*180/Math.PI)%360+360)%360;
+  $('scopeData').textContent='RNG '+rngStr+' · HDG '+String(Math.round(hdg)%360).padStart(3,'0')+'°';
+  drawRadar();
+}
+
+/* ---------------- post-processing ---------------- */
+let composer=null, bloomPass=null, gradePass=null, ssrPass=null, ssaoPass=null;
+const GradeShader={
+  uniforms:{tDiffuse:{value:null},uTime:{value:0},uVig:{value:.32},uGrain:{value:.016},uAber:{value:.0016},uNV:{value:1}},
+  vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`uniform sampler2D tDiffuse;uniform float uTime,uVig,uGrain,uAber,uNV;varying vec2 vUv;
+    float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+    void main(){
+      vec2 c=vUv-.5;
+      float r2=dot(c,c);
+      vec2 off=c*uAber*r2*18.;
+      vec3 col;
+      col.r=texture2D(tDiffuse,vUv+off).r;
+      col.g=texture2D(tDiffuse,vUv).g;
+      col.b=texture2D(tDiffuse,vUv-off).b;
+      // NV-OPTIC: cyan-blue luminance grade + shadow lift for visibility
+      float lum=dot(col,vec3(.299,.587,.114));
+      vec3 nvc=vec3(lum*.5,lum*1.04,lum)*1.32;
+      col=mix(col,nvc,uNV*.5);
+      col+=vec3(0.,.014,.017)*uNV;
+      col*=1.-uVig*smoothstep(.18,.85,r2*2.6);
+      col+=(hash(vUv*vec2(1920.,1080.)+uTime*60.)-.5)*uGrain;
+      gl_FragColor=vec4(col,1.);
+    }`
+};
+/* FX that must never enter a depth/normal prepass: LIDAR wireframes,
+   detection cones, shield bubbles, beams, pulses, beacon shafts.
+   Rendered as solid geometry there, they z-fight their coplanar base
+   meshes and corrupt SSAO/SSR into exactly the grey-line artifacts. */
+function isDepthPassPollution(o){
+  if(sensorFX.has(o))return true; // explicit registry: tripwires, halos, beacons…
+  if(o.isPoints||o.isLine)return true;
+  if(!o.material)return false;
+  const ms=Array.isArray(o.material)?o.material:[o.material];
+  return ms.some(m=>m.wireframe||(m.transparent&&m.blending===THREE.AdditiveBlending));
+}
+const _ssrVisCache=new Map();
+function hideFxForPrepass(){
+  scene.traverse(o=>{ if(isDepthPassPollution(o)){ _ssrVisCache.set(o,o.visible); o.visible=false; } });
+}
+function restoreFxAfterPrepass(){
+  _ssrVisCache.forEach((v,o)=>o.visible=v); _ssrVisCache.clear();
+}
+function buildComposer(){
+  if(composer){ composer.passes.forEach(p=>p.dispose&&p.dispose()); composer.dispose(); }
+  composer=new EffectComposer(renderer);
+  ssrPass=null; ssaoPass=null;
+  if(Q.ssr){
+    ssrPass=new SSRPass({renderer,scene,camera,width:innerWidth,height:innerHeight,
+      selects:reflectiveMeshes,groundReflector:null});
+    ssrPass.maxDistance=45; ssrPass.thickness=.3; ssrPass.opacity=.5; // thickness too small = stripe banding
+    // SSRPass has NO visibility handling — wrap its override-material prepasses
+    ssrPass.renderOverride=function(renderer,mat,rt,cc,ca){
+      hideFxForPrepass();
+      SSRPass.prototype.renderOverride.call(this,renderer,mat,rt,cc,ca);
+      restoreFxAfterPrepass();
+    };
+    ssrPass.renderMetalness=function(renderer,mat,rt,cc,ca){
+      hideFxForPrepass();
+      SSRPass.prototype.renderMetalness.call(this,renderer,mat,rt,cc,ca);
+      restoreFxAfterPrepass();
+    };
+    composer.addPass(ssrPass);
+  }else if(Q.ssao){
+    // SSAOPass does NOT render the scene — it multiplies AO onto readBuffer.
+    // Without this RenderPass it composites over a stale/undefined buffer.
+    composer.addPass(new RenderPass(scene,camera));
+    ssaoPass=new SSAOPass(scene,camera,innerWidth,innerHeight,24);
+    ssaoPass.kernelRadius=8; ssaoPass.minDistance=.0008; ssaoPass.maxDistance=.02; // fractions of near-far: 0.8u / 20u
+    // stock pass hides only Points/Lines in its normal-depth render — extend to all FX
+    ssaoPass.overrideVisibility=function(){
+      const cache=this._visibilityCache;
+      this.scene.traverse(o=>{ cache.set(o,o.visible); if(isDepthPassPollution(o))o.visible=false; });
+    };
+    composer.addPass(ssaoPass);
+  }else{
+    composer.addPass(new RenderPass(scene,camera));
+  }
+  bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),Q.bloomStrength,.55,.82);
+  composer.addPass(bloomPass);
+  gradePass=new ShaderPass(GradeShader);
+  composer.addPass(gradePass);
+  composer.addPass(new OutputPass());
+}
+function applyQuality(name){
+  qualityName=name; Q=QUALITY[name];
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1,Q.pixelRatio));
+  renderer.shadowMap.enabled=Q.shadows;
+  renderer.shadowMap.needsUpdate=true;
+  scene.traverse(o=>{ if(o.material)o.material.needsUpdate=true; });
+  buildComposer();
+  $('btnQuality').textContent='Quality: '+name[0]+name.slice(1).toLowerCase();
+  document.querySelectorAll('.qbtn').forEach(b=>b.classList.toggle('sel',b.dataset.q===name));
+}
+
+/* ---------------- camera rig ---------------- */
+const camTarget=new THREE.Vector3();
+function updateCamera(dt){
+  const back=tmpV.set(Math.sin(player.yaw),0,Math.cos(player.yaw));
+  const dist=9.5+player.vel.length()*.09;
+  camTarget.copy(player.pos)
+    .addScaledVector(back,dist*Math.cos(player.pitch))
+    .add(new THREE.Vector3(0,3.2+dist*Math.sin(player.pitch)*.9,0));
+  camera.position.x=damp(camera.position.x,camTarget.x,10,dt);
+  camera.position.y=damp(camera.position.y,camTarget.y,10,dt);
+  camera.position.z=damp(camera.position.z,camTarget.z,10,dt);
+  const look=tmpV2.copy(player.pos).addScaledVector(back,-14);
+  look.y+=3-player.pitch*10;
+  camera.lookAt(look);
+  if(shakeAmt>0.001){
+    camera.position.add(new THREE.Vector3(rand(-1,1),rand(-1,1),rand(-1,1)).multiplyScalar(shakeAmt*.5));
+    shakeAmt*=Math.exp(-6*dt);
+  }
+}
+
+/* ---------------- game state ---------------- */
+const game={
+  state:'BOOT', levelIndex:0, level:null, time:0,
+  stats:{kills:0,alerts:0,deaths:0,startTime:0},
+};
+/* Browser-local campaign progress; guarded for restrictive hosting/privacy modes. */
+const SAVE_KEY='vertascan_blackout_protocol_v5';
+let campaign={unlocked:1,cleared:[],bestAlerts:{},runs:0};
+try{
+  const stored=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
+  if(stored && typeof stored==='object'){
+    campaign.unlocked=clamp(Number(stored.unlocked)||1,1,LEVELS.length);
+    campaign.cleared=Array.isArray(stored.cleared)?stored.cleared.filter(n=>Number.isInteger(n)&&n>=0&&n<LEVELS.length):[];
+    campaign.bestAlerts=stored.bestAlerts||{};
+    campaign.runs=Number(stored.runs)||0;
+  }
+}catch(e){}
+function saveCampaign(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(campaign));}catch(e){}}
+function showMissionSelect(){
+  const grid=$('missionGrid');grid.replaceChildren();
+  $('progressLabel').textContent=`${campaign.cleared.length} / ${LEVELS.length} OPERATIONS CLEARED · ${campaign.runs} CAMPAIGN DEPLOYMENTS`;
+  LEVELS.forEach((L,i)=>{
+    const b=document.createElement('button');b.className='missionCard';
+    const locked=i>=campaign.unlocked;b.disabled=locked;
+    const rank=campaign.cleared.includes(i)?'CLEARED':locked?'ENCRYPTED':'AVAILABLE';
+    const best=campaign.bestAlerts[i];
+    b.innerHTML=`<span class="num">${L.num}</span><strong></strong><small></small><span></span>`;
+    b.querySelector('strong').textContent=L.name;
+    b.querySelector('small').textContent=rank+(best===0?' · GHOST RATING':'');
+    b.querySelector('span:last-child').textContent=locked?'COMPLETE PRIOR OPERATION TO UNLOCK':`${L.objectives.length} DIRECTIVES · SELECT TO BRIEF`;
+    b.onclick=()=>{game.levelIndex=i;showBriefing(i);};grid.appendChild(b);
+  });
+  game.state='SELECT';show('missionSelect');
+}
+let audioMuted=false;
+function toggleAudio(){
+  audioMuted=!audioMuted;
+  $('btnAudio').textContent='Audio: '+(audioMuted?'Off':'On');
+  if(AudioSys.master&&AudioSys.ctx)AudioSys.master.gain.setTargetAtTime(audioMuted?0:.5,AudioSys.ctx.currentTime,.05);
+  try{localStorage.setItem(SAVE_KEY+'_mute',String(audioMuted));}catch(e){}
+}
+try{audioMuted=localStorage.getItem(SAVE_KEY+'_mute')==='true';}catch(e){}
+$('btnAudio').textContent='Audio: '+(audioMuted?'Off':'On');
+function show(id){
+  ['boot','title','missionSelect','brief','pause','death','clear','win'].forEach(k=>$(k).classList.add('hidden'));
+  if(id)$(id).classList.remove('hidden');
+  $('hud').classList.toggle('on',!id);
+  $('touchUI').classList.toggle('on',!id&&MOBILE.active);
+}
+function loadLevel(i){
+  clearWorld();
+  orbs.length=0; bolts.forEach(b=>fxGroup.remove(b.mesh)); bolts.length=0;
+  beams.length=0; pulseFX.length=0; searchlights.length=0; tripwires.length=0;
+  doors.length=0; hackZones.length=0; pylons.length=0; spinProps.length=0;
+  if(rain){ scene.remove(rain.points); rain=null; }
+  $('missionTimer').style.display='none';
+  awareness.value=0;
+  const proto=LEVELS[i];
+  game.level=Object.assign(Object.create(proto),{objectives:proto.objectives.map(o=>({...o,done:false}))});
+  game.level.build();
+  for(const [type,pos,wps] of game.level.spawnOrbs)orbs.push(new Orb(type,pos,wps));
+  lidarify(worldGroup); // sensor wireframe on everything the optic sees — never the craft
+  player.pos.copy(game.level.playerStart); player.vel.set(0,0,0);
+  player.yaw=Math.atan2(-(0-player.pos.x),-(0-player.pos.z)); player.pitch=0; // face level center / down-corridor
+  player.shield=player.shieldMax; player.hull=player.hullMax;
+  player.energy=player.energyMax; player.heat=0; player.overheated=false;
+  player.dead=false; player.cloak=false; setDroneOpacity(1);
+  renderObjectives();
+  if(Q.ssr)buildComposer(); // rebind selects to new level meshes
+}
+function showBriefing(i){
+  const L=LEVELS[i];
+  show('brief');
+  $('briefTitle').innerHTML='MISSION <b>'+L.num+'</b>';
+  $('briefLvl').textContent=L.name;
+  const body=$('briefBody'); body.textContent='';
+  let ci=0; const txt=L.brief;
+  clearInterval(showBriefing._iv);
+  showBriefing._iv=setInterval(()=>{
+    ci+=3; body.textContent=txt.slice(0,ci);
+    if(ci>=txt.length)clearInterval(showBriefing._iv);
+  },14);
+  const ob=$('briefObj'); ob.innerHTML='';
+  L.objectives.forEach(o=>{const d=document.createElement('div');d.textContent=o.label;ob.appendChild(d);});
+  game.state='BRIEF';
+}
+function startMission(){
+  loadLevel(game.levelIndex);
+  show(null);
+  game.state='PLAY';
+  if(!MOBILE.active)Promise.resolve(canvas.requestPointerLock?.()).catch(()=>{});
+  if(MOBILE.active&&MOBILE.scheme==='TILT')calibrateTilt(); // neutral grip = how you hold it at deploy
+  if(MOBILE.active){ surgeLatch=false; keys['ShiftLeft']=false; $('tWpn').textContent='WPN '+player.weapon; }
+  flashMsg('MISSION '+LEVELS[game.levelIndex].num+' — '+LEVELS[game.levelIndex].name);
+}
+function pauseGame(){
+  if(game.state!=='PLAY')return;
+  game.state='PAUSE'; show('pause');
+  AudioSys.duckMusic(.22,true);
+  document.exitPointerLock&&document.exitPointerLock();
+}
+function levelComplete(){
+  const index=game.levelIndex;
+  if(!campaign.cleared.includes(index))campaign.cleared.push(index);
+  campaign.unlocked=Math.min(LEVELS.length,Math.max(campaign.unlocked,index+2));
+  campaign.bestAlerts[index]=Math.min(campaign.bestAlerts[index]??Infinity,game.stats.alerts);
+  saveCampaign();
+  game.state='CLEAR';
+  document.exitPointerLock&&document.exitPointerLock();
+  const ghost=game.stats.alerts===0;
+  $('clearStats').innerHTML=
+    'ORBS NEUTRALIZED ... <b>'+game.stats.kills+'</b><br>'+
+    'ALERTS TRIGGERED ... <b>'+game.stats.alerts+'</b><br>'+
+    (ghost?'RATING ............. <b>GHOST</b>':'RATING ............. <b>OPERATIVE</b>');
+  if(game.levelIndex>=LEVELS.length-1){
+    $('winStats').innerHTML=$('clearStats').innerHTML+'<br>REDEPLOYMENTS ...... <b>'+game.stats.deaths+'</b>';
+    show('win'); game.state='WIN';
+  }else{
+    $('clearSub').textContent='NEXT: MISSION '+LEVELS[game.levelIndex+1].num+' — '+LEVELS[game.levelIndex+1].name;
+    show('clear');
+  }
+}
+
+/* buttons */
+$('btnStart').onclick=()=>{AudioSys.ensure();if(audioMuted&&AudioSys.master)AudioSys.master.gain.value=0;AudioSys.startMusic();campaign.runs++;saveCampaign();game.levelIndex=Math.min(campaign.unlocked-1,LEVELS.length-1);showBriefing(game.levelIndex);};
+$('btnMissions').onclick=showMissionSelect;
+$('btnBackTitle').onclick=()=>{game.state='TITLE';show('title');};
+$('btnAudio').onclick=()=>{AudioSys.ensure();toggleAudio();};
+$('btnDeploy').onclick=()=>{AudioSys.ensure();AudioSys.startMusic();AudioSys.duckMusic(1);startMission();};
+$('btnResume').onclick=()=>{show(null);game.state='PLAY';AudioSys.duckMusic(1);if(!MOBILE.active)Promise.resolve(canvas.requestPointerLock?.()).catch(()=>{});};
+$('btnRestart').onclick=()=>{AudioSys.duckMusic(1);startMission();};
+$('btnRetry').onclick=()=>{AudioSys.duckMusic(1);startMission();};
+$('btnAbort').onclick=()=>{show('title');game.state='TITLE';};
+$('btnNext').onclick=()=>{game.levelIndex++;showBriefing(game.levelIndex);};
+$('btnAgain').onclick=()=>{game.levelIndex=0;game.stats={kills:0,alerts:0,deaths:0,startTime:game.time};show('title');game.state='TITLE';};
+$('btnQuality').onclick=()=>{
+  const names=Object.keys(QUALITY);
+  applyQuality(names[(names.indexOf(qualityName)+1)%names.length]);
+};
+document.querySelectorAll('.qbtn').forEach(b=>b.onclick=()=>applyQuality(b.dataset.q));
+
+/* ---------------- main loop ---------------- */
+const clock=new THREE.Clock();
+let _frameCounter=0, _fpsWindow=0, _fpsFrames=0;
+function tick(){
+  requestAnimationFrame(tick);
+  const dt=Math.min(clock.getDelta(),.05);
+  game.time+=dt;
+  _fpsWindow+=dt; _fpsFrames++;
+  if(_fpsWindow>=2){
+    const fps=_fpsFrames/_fpsWindow;
+    _fpsWindow=0;_fpsFrames=0;
+    // Sustained low frame rate on Ultra: revert to a safer profile.
+    if(game.state==='PLAY' && qualityName==='ULTRA' && fps<23){
+      applyQuality('HIGH'); flashMsg('GRAPHICS AUTO-ADJUSTED · HIGH');
+    }
+  }
+  if(gradePass)gradePass.uniforms.uTime.value=game.time;
+
+  if(game.state==='PLAY'){
+    updatePlayer(dt);
+    for(const o of orbs)o.update(dt);
+    updateBolts(dt);
+    // pylon hit detection for player bolts
+    for(let i=bolts.length-1;i>=0;i--){
+      const b=bolts[i];
+      if(!b.hostile&&pylonHitCheck(b.mesh.position,b.dmg)){
+        fxGroup.remove(b.mesh); bolts.splice(i,1);
+      }
+    }
+    updatePulses(dt);
+    updateSearchlights(dt);
+    updateTripwires(dt);
+    updateHacks(dt);
+    for(const s of spinProps)s.m.rotation[s.ax]+=s.sp*dt;
+    awareness.update(dt);
+    sparks.update(dt); trail.update(dt);
+    if(rain){
+      rain.update(dt);
+      // recycle rain around player
+      const P=rain.pos;
+      for(let i=0;i<rain.count;i++){
+        const j=i*3;
+        if(P[j+1]<0){ P[j]=player.pos.x+rand(-140,140); P[j+1]=rand(50,90); P[j+2]=player.pos.z+rand(-140,140); rain.life[i]=1; }
+      }
+    }
+    if(game.level.check)game.level.check(dt);
+    AudioSys.setTension(awareness.value/100);
+    if(game.level.objectives.every(o=>o.done))levelComplete();
+    // exit beacon pulse
+    if(game.level.exitBeacon){ const r=game.level.exitBeacon.userData.ring;
+      r.scale.setScalar(1+Math.sin(game.time*4)*.12); r.rotation.z+=dt; }
+    updateHUD();
+  }else{
+    // ambient drift on menus
+    AudioSys.setTension(0);
+    sparks.update(dt); trail.update(dt); updatePulses(dt);
+    if(player.mixer)player.mixer.update(dt*.4);
+  }
+  updateCamera(dt);
+  try{
+    if(composer)composer.render();
+    else renderer.render(scene,camera);
+  }catch(err){
+    console.error('Render pipeline error; switching to performance profile',err);
+    if(qualityName!=='PERFORMANCE'){
+      try{applyQuality('PERFORMANCE');}catch(fallbackError){console.error(fallbackError);}
+    }
+  }
+}
+
+/* ---------------- resize ---------------- */
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+  if(composer)composer.setSize(innerWidth,innerHeight);
+});
+
+/* ---------------- init ---------------- */
+(async()=>{
+  try{
+    sparks=new ParticlePool(2200);
+    trail=new ParticlePool(900);
+    await loadAssets();
+    if(audioMuted){AudioSys.ensure();AudioSys.master.gain.value=0;}
+    setupDrone();
+    buildComposer();
+    // menu diorama: drone hovering over a reflective slab
+    loadLevel(0);
+    game.state='TITLE';
+    setTimeout(()=>show('title'),650);
+  }catch(e){
+    bootLog('<b>BOOT HALTED</b> — verify blue.glb sits beside index.html and serve over HTTPS/localhost');
+    console.error(e);
+  }
+})();
+tick();
+</script>
+</body>
+</html>

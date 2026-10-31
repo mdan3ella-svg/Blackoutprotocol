@@ -1,0 +1,14 @@
+{
+  "name": "vertascan-blackout-protocol",
+  "private": true,
+  "version": "6.0.0",
+  "description": "GitHub Pages WebGL game with build-time vendored Three.js",
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs",
+    "verify": "node scripts/verify.mjs",
+    "build": "npm run vendor && npm run verify"
+  },
+  "devDependencies": {
+    "three": "0.170.0"
+  }
+}
