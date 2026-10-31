@@ -1,0 +1,11 @@
+import {cp, mkdir, readFile, writeFile} from 'node:fs/promises';
+import path from 'node:path';
+const root=process.cwd();
+const base=path.join(root,'node_modules','three');
+const dst=path.join(root,'vendor','three');
+await mkdir(dst,{recursive:true});
+await cp(path.join(base,'build','three.module.js'),path.join(dst,'three.module.js'));
+await cp(path.join(base,'examples','jsm'),path.join(dst,'addons'),{recursive:true,force:true});
+const license=await readFile(path.join(base,'LICENSE'),'utf8');
+await writeFile(path.join(dst,'THREE_LICENSE.txt'),license);
+console.log('Vendored Three.js 0.170.0 and all local example module dependencies.');
